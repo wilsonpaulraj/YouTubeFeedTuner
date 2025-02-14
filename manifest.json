@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Watch History Tracker",
+  "version": "1.0",
+  "permissions": ["storage", "scripting", "history", "activeTab"],
+  "host_permissions": ["https://www.youtube.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/feed/history"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["chart.js", "style.css"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
