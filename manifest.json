@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube Watch History Tracker",
   "version": "1.0",
-  "permissions": ["storage", "scripting", "history", "activeTab"],
+  "permissions": ["storage", "scripting", "history", "activeTab", "tabs", "cookies"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
     "service_worker": "background.js",
@@ -13,7 +13,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/feed/history"],
+      "matches": ["https://www.youtube.com/feed/history", "https://www.youtube.com/results*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

