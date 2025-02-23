@@ -218,30 +218,16 @@ button {
 }
 
 /* Scrollbar */
-.content::-webkit-scrollbar {
-  width: 5px;
+
+#yt-summary-sidebar {
+  overflow: hidden; /* Prevent scrolling */
 }
 
-.content::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+#yt-summary-sidebar::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari */
 }
 
-.content::-webkit-scrollbar-thumb {
-  background: var(--bg-accent);
-  border-radius: 20px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  #yt-summary-sidebar {
-    width: 100%;
-  }
-
-  .content {
-    padding: 16px;
-  }
+#yt-summary-sidebar {
+  -ms-overflow-style: none;  /* Hide scrollbar for IE, Edge */
+  scrollbar-width: none;  /* Hide scrollbar for Firefox */
 }
