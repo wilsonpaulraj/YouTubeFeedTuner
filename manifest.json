@@ -9,7 +9,6 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_icon": {
       "16": "icon.jpg",
       "48": "icon.jpg",
@@ -25,8 +24,9 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
+      "resources": ["inject.js","sidebar.html", "sidebar.css"],
       "matches": ["https://www.youtube.com/*"]
     }
   ]
+
 }

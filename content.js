@@ -149,301 +149,87 @@ async function getSummary(transcript) {
     }
 }
 
+async function fetchAndInjectSidebar() {
+    try {
+        // Fetch sidebar HTML
+        const response = await fetch(chrome.runtime.getURL('sidebar.html'));
+        const sidebarHTML = await response.text();
 
-if (!document.getElementById('yt-summary-sidebar')) {
-    const sidebar = document.createElement('div');
-    sidebar.id = 'yt-summary-sideba2r';
-
-    sidebar.innerHTML = `
-<div id="yt-summary-sidebar" class="dark-theme">
-  <div class="sidebar-header">
-    <div class="header-left">
-      <div class="pulse-dot"></div>
-      <h2>AI Summary</h2>
-    </div>
-    <button id="refresh-button" class="action-button" aria-label="Refresh">
-      Refresh
-    </button>
-    <button id="close-sidebar" class="icon-button" aria-label="Close">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-      </svg>
-    </button>
-  </div>
-
-  <div class="content">
-    <div class="summary-container">
-      <div class="summary-header">
-        <div class="tags">
-          <span class="tag">AI Generated</span>
-          <span class="tag">Live</span>
-        </div>
-        <button class="action-button" aria-label="Copy summary">
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-          </svg>
-          Copy
-        </button>
-      </div>
-
-      <div id="summary" class="summary-content">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>AI is analyzing the video...</p>
-          <div class="progress-bar">
-            <div class="progress" style="width: 60%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<style>
-:root {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --bg-accent: #2a2a2a;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --accent-color: #3a86ff;
-  --accent-secondary: #2563eb;
-  --success-color: #22c55e;
-  --border-color: #333333;
-  --shadow-color: rgba(0, 0, 0, 0.4);
-}
-
-#yt-summary-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 400px;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -10px 0 30px var(--shadow-color);
-  z-index: 10000;
-}
-
-.sidebar-header {
-  padding: 20px 24px;
-  background-color: var(--bg-secondary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  position: relative;
-}
-
-.pulse-dot::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 16px;
-  height: 16px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  opacity: 0.2;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  70% { transform: scale(1.2); opacity: 0; }
-  100% { transform: scale(0.8); opacity: 0; }
-}
-
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
-
-.summary-container {
-  background: var(--bg-secondary);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.tags {
-  display: flex;
-  gap: 8px;
-}
-
-.tag {
-  background: var(--bg-accent);
-  color: var(--text-primary);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.tag:first-child {
-  background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
-}
-
-.action-button {
-  background: var(--bg-accent);
-  border: none;
-  color: var(--text-primary);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.action-button:hover {
-  background: var(--border-color);
-  transform: translateY(-1px);
-}
-
-.summary-content {
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 40px 0;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.spinner {
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--bg-accent);
-  border-top: 2px solid var(--accent-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-accent);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-
-.progress {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary));
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.icon-button {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.icon-button:hover {
-  background: var(--bg-accent);
-  color: var(--text-primary);
-}
-
-/* Scrollbar */
-.content::-webkit-scrollbar {
-  width: 5px;
-}
-
-.content::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--bg-accent);
-  border-radius: 20px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  #yt-summary-sidebar {
-    width: 100%;
-  }
-
-  .content {
-    padding: 16px;
-  }
-}
-</style>
-    `;
-
-    document.body.appendChild(sidebar);
-
-    document.getElementById('close-sidebar').addEventListener('click', () => {
-        console.log('Closing sidebar');
-        sidebar.remove();
-    });
-
-    getTranscript().then(transcript => {
-        if (transcript != "") {
-            getSummary(transcript).then(summary => {
-                document.getElementById('summary').innerHTML = parseMarkdown(summary);
-            });
+        let ytdApp = document.querySelector('ytd-app');
+        if (ytdApp) {
+            ytdApp.style.width = "70%";
         }
-    });
+        let ynav = document.getElementById('masthead-container');
+        if (ynav) {
+            ynav.style.width = "70%";
+        }
+        // Create and insert sidebar
+        const sidebar = document.createElement('div');
+        sidebar.innerHTML = sidebarHTML;
+        document.body.appendChild(sidebar);
 
+        // Add sidebar CSS
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = chrome.runtime.getURL('sidebar.css');
+        document.head.appendChild(link);
+
+        // Event listeners
+        document.getElementById('close-sidebar').addEventListener('click', () => {
+            sidebar.remove();
+        });
+
+        document.getElementById('refresh-button').addEventListener('click', () => {
+            document.getElementById('summary').innerHTML = getLoadingState();
+            fetchAndDisplaySummary();
+        });
+
+        // Initial fetch
+        fetchAndDisplaySummary();
+    } catch (error) {
+        console.error('Failed to load sidebar:', error);
+    }
 }
+
+async function fetchAndDisplaySummary() {
+    try {
+        const transcript = await getTranscript();
+        if (transcript) {
+            const summary = await getSummary(transcript);
+            const readingTime = calculateReadingTime(summary);
+            document.getElementById('summary').innerHTML = parseMarkdown(summary);
+            updateTags(readingTime);
+        } else {
+            document.getElementById('summary').innerHTML = '<p>No transcript found.</p>';
+        }
+    } catch (error) {
+        console.error('Failed to fetch summary:', error);
+        document.getElementById('summary').innerHTML = '<p>Error fetching summary.</p>';
+    }
+}
+
+function calculateReadingTime(text) {
+    const words = text.split(/\s+/).length;
+    const readingTime = Math.ceil(words / 200); // 200 words per minute
+    return readingTime;
+}
+
+function updateTags(readingTime) {
+    const tagContainer = document.querySelector('.tag2');
+    tagContainer.innerText = readingTime + " min";
+    tagContainer.classList.add('tag');
+}
+
+function getLoadingState() {
+    return `
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>AI is analyzing the video...</p>
+            <div class="progress-bar">
+                <div class="progress" style="width: 60%;"></div>
+            </div>
+        </div>
+    `;
+}
+
+fetchAndInjectSidebar();
