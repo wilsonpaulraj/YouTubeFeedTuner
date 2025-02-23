@@ -1,11 +1,10 @@
-document.getElementById("startSearch").addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "startSearchAttack" });
-});
-
-document.getElementById("stopSearch").addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "stopSearchAttack" });
-});
-
-document.getElementById("clearHistory").addEventListener("click", () => {
-    chrome.history.deleteAll(() => alert("Cleared YouTube history!"));
+// popup.js
+document.getElementById('open-sidebar').addEventListener('click', () => {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.scripting.executeScript({
+            target: { tabId: tabs[0].id },
+            files: ['content.js']
+        });
+    });
+    window.close();
 });

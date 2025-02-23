@@ -1,27 +1,32 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Watch History Tracker",
+  "name": "YouTube Video Summarizer",
   "version": "1.0",
-  "permissions": ["storage", "scripting", "history", "activeTab", "tabs", "cookies"],
+  "description": "Get transcripts and AI-generated summaries for YouTube videos.",
+  "permissions": ["storage", "scripting", "activeTab"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon.jpg",
+      "48": "icon.jpg",
+      "128": "icon.jpg"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/feed/history", "https://www.youtube.com/results*"],
+      "matches": ["https://www.youtube.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["chart.js", "style.css"],
-      "matches": ["<all_urls>"]
+      "resources": ["inject.js"],
+      "matches": ["https://www.youtube.com/*"]
     }
   ]
 }
