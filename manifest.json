@@ -24,7 +24,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["inject.js","sidebar.html", "sidebar.css"],
+      "resources": ["ui/sidebar.html", "ui/sidebar.css"],
       "matches": ["https://www.youtube.com/*"]
     }
   ]

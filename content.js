@@ -1,3 +1,6 @@
+console.log('Content script loaded');
+
+
 async function waitForTranscriptButton(timeout = 10000) {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
@@ -130,13 +133,13 @@ function parseMarkdown(markdown) {
 async function getSummary(transcript) {
 
     const prompt = `
-    You are an expert at summarizes the youtube transcript.
-    a detailed summarize down to the main content of the video.
+        You are an expert at summarizes the youtube transcript.
+        a detailed summarize down to the main content of the video.
 
-    Summarize the following transcript:
-     ${transcript}
+        Summarize the following transcript:
+        ${transcript}
 
-     `;
+        `;
 
     try {
         console.log('Attempting to get summary');
@@ -149,32 +152,93 @@ async function getSummary(transcript) {
     }
 }
 
+function addFloatingIconToNavbar() {
+    const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
+    console.log('Buttons Container:', buttonsContainer);
+    if (!buttonsContainer) {
+        console.error("YouTube buttons container not found!");
+        return;
+    }
+
+    const floatingIcon = document.createElement('div');
+    floatingIcon.id = 'floating-icon';
+    floatingIcon.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 5h16M4 12h10M4 19h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19 15l-4 4l-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+
+    floatingIcon.style.cssText = `
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: transparent;
+        margin-left: 8px;
+        color: #AAAAAA;
+        transition: color 0.2s ease, background-color 0.2s ease;
+    `;
+
+    const style = document.createElement('style');
+    style.textContent = `
+        #floating-icon:hover {
+            color: #FFFFFF;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        #floating-icon:active {
+            transform: scale(0.95);
+        }
+        @media (prefers-color-scheme: light) {
+            #floating-icon {
+                color: #606060;
+            }
+            #floating-icon:hover {
+                color: #0F0F0F;
+                background-color: rgba(0, 0, 0, 0.05);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+
+    buttonsContainer.appendChild(floatingIcon);
+
+    floatingIcon.addEventListener('click', () => {
+        fetchAndInjectSidebar();
+    });
+
+    console.log('Summary sidebar toggler added to YouTube navbar');
+}
+
+addFloatingIconToNavbar();
+
+
+floatingIcon.addEventListener('click', () => {
+    fetchAndInjectSidebar();
+});
+
 async function fetchAndInjectSidebar() {
     try {
-        // Fetch sidebar HTML
-        const response = await fetch(chrome.runtime.getURL('sidebar.html'));
+        const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'));
+        console.log(response);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sidebar.html: ${response.status}`);
+        }
         const sidebarHTML = await response.text();
 
-        let ytdApp = document.querySelector('ytd-app');
-        if (ytdApp) {
-            ytdApp.style.width = "70%";
-        }
-        let ynav = document.getElementById('masthead-container');
-        if (ynav) {
-            ynav.style.width = "70%";
-        }
-        // Create and insert sidebar
         const sidebar = document.createElement('div');
+        sidebar.id = 'sidebar-container';
         sidebar.innerHTML = sidebarHTML;
         document.body.appendChild(sidebar);
 
-        // Add sidebar CSS
         const link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = chrome.runtime.getURL('sidebar.css');
+        link.href = chrome.runtime.getURL('ui/sidebar.css');
         document.head.appendChild(link);
 
-        // Event listeners
         document.getElementById('close-sidebar').addEventListener('click', () => {
             sidebar.remove();
         });
@@ -184,29 +248,31 @@ async function fetchAndInjectSidebar() {
             fetchAndDisplaySummary();
         });
 
-        // Initial fetch
         fetchAndDisplaySummary();
+
     } catch (error) {
         console.error('Failed to load sidebar:', error);
     }
 }
 
+
 async function fetchAndDisplaySummary() {
     try {
         const transcript = await getTranscript();
-        if (transcript) {
+        if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
             const summary = await getSummary(transcript);
             const readingTime = calculateReadingTime(summary);
             document.getElementById('summary').innerHTML = parseMarkdown(summary);
             updateTags(readingTime);
         } else {
-            document.getElementById('summary').innerHTML = '<p>No transcript found.</p>';
+            document.getElementById('summary').innerHTML = '<p>No transcript found or loaded.</p>';
         }
     } catch (error) {
         console.error('Failed to fetch summary:', error);
         document.getElementById('summary').innerHTML = '<p>Error fetching summary.</p>';
     }
 }
+
 
 function calculateReadingTime(text) {
     const words = text.split(/\s+/).length;
@@ -222,14 +288,18 @@ function updateTags(readingTime) {
 
 function getLoadingState() {
     return `
-        <div class="loading-state">
-            <div class="spinner"></div>
-            <p>AI is analyzing the video...</p>
-            <div class="progress-bar">
-                <div class="progress" style="width: 60%;"></div>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>AI is analyzing the video...</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 60%;"></div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 }
 
-fetchAndInjectSidebar();
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        toggleSidebar(false);
+    }
+});
