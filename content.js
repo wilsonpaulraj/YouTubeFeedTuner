@@ -152,11 +152,9 @@ async function getSummary(transcript) {
     }
 }
 
-function addFloatingIconToNavbar() {
+function addFloatingIcon() {
     const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
-    console.log('Buttons Container:', buttonsContainer);
-    if (!buttonsContainer) {
-        console.error("YouTube buttons container not found!");
+    if (!buttonsContainer || document.getElementById('floating-icon')) {
         return;
     }
 
@@ -168,7 +166,6 @@ function addFloatingIconToNavbar() {
             <path d="M19 15l-4 4l-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     `;
-
     floatingIcon.style.cssText = `
         width: 40px;
         height: 40px;
@@ -183,42 +180,29 @@ function addFloatingIconToNavbar() {
         transition: color 0.2s ease, background-color 0.2s ease;
     `;
 
-    const style = document.createElement('style');
-    style.textContent = `
-        #floating-icon:hover {
-            color: #FFFFFF;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        #floating-icon:active {
-            transform: scale(0.95);
-        }
-        @media (prefers-color-scheme: light) {
-            #floating-icon {
-                color: #606060;
-            }
-            #floating-icon:hover {
-                color: #0F0F0F;
-                background-color: rgba(0, 0, 0, 0.05);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-
-    buttonsContainer.appendChild(floatingIcon);
-
     floatingIcon.addEventListener('click', () => {
         fetchAndInjectSidebar();
     });
 
-    console.log('Summary sidebar toggler added to YouTube navbar');
+    buttonsContainer.appendChild(floatingIcon);
+    console.log('Floating icon added');
 }
 
-addFloatingIconToNavbar();
+// Initial injection
+addFloatingIcon();
 
-
-floatingIcon.addEventListener('click', () => {
-    fetchAndInjectSidebar();
+// Re-add icon after soft navigations
+document.addEventListener('yt-navigate-finish', () => {
+    console.log('Page navigation detected, adding floating icon...');
+    addFloatingIcon();
 });
+
+const observer = new MutationObserver(() => {
+    addFloatingIcon();
+});
+observer.observe(document.body, { childList: true, subtree: true });
+
+
 
 async function fetchAndInjectSidebar() {
     try {
