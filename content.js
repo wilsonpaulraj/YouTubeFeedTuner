@@ -133,10 +133,9 @@ function parseMarkdown(markdown) {
 async function getSummary(transcript) {
 
     const prompt = `
-        You are an expert at summarizes the youtube transcript.
-        a detailed summarize down to the main content of the video.
+        You are an expert summarizer of YouTube transcripts.  Provide a concise and informative summary of the *content* of the following transcript. Focus on the key information, arguments, and topics discussed.  Avoid phrases like "This video explains..." or "The speaker discusses...".  Instead, directly present the information as if you were explaining it to someone.
 
-        Summarize the following transcript:
+        Transcript:
         ${transcript}
 
         `;
@@ -152,68 +151,97 @@ async function getSummary(transcript) {
     }
 }
 
-function addFloatingIcon() {
+function addSidebarToggleButtonToNavbar() {
     const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
-    if (!buttonsContainer || document.getElementById('floating-icon')) {
+    const existingButton = document.getElementById('sidebar-toggle-icon');
+
+    // Ensure the container exists and the button is not already there
+    if (!buttonsContainer || existingButton) {
         return;
     }
 
-    const floatingIcon = document.createElement('div');
-    floatingIcon.id = 'floating-icon';
-    floatingIcon.innerHTML = `
+    const sidebarToggleButton = document.createElement('div');
+    sidebarToggleButton.id = 'sidebar-toggle-icon';
+    sidebarToggleButton.innerHTML = `
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M4 5h16M4 12h10M4 19h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             <path d="M19 15l-4 4l-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
     `;
-    floatingIcon.style.cssText = `
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: transparent;
-        margin-left: 8px;
-        color: #AAAAAA;
-        transition: color 0.2s ease, background-color 0.2s ease;
-    `;
+    sidebarToggleButton.style.cssText = `
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FF0000; /* Bright red */
+    transition: filter 0.3s ease; /* Use filter for icon glow */
+    filter: drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000); /* Initial glow */
+`;
 
-    floatingIcon.addEventListener('click', () => {
+    sidebarToggleButton.addEventListener('mouseenter', () => {
+        sidebarToggleButton.style.filter = 'drop-shadow(0 0 8px #FF4500) drop-shadow(0 0 15px #FF4500)'; // Stronger glow on hover
+        sidebarToggleButton.style.color = '#FF4500'; // Slightly lighter red on hover
+    });
+
+    sidebarToggleButton.addEventListener('mouseleave', () => {
+        sidebarToggleButton.style.filter = 'drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000)'; // Original glow
+        sidebarToggleButton.style.color = '#FF0000';
+    });
+
+    sidebarToggleButton.addEventListener('click', () => {
         fetchAndInjectSidebar();
     });
 
-    buttonsContainer.appendChild(floatingIcon);
+    buttonsContainer.appendChild(sidebarToggleButton);
     console.log('Floating icon added');
 }
 
+// Debounce function to avoid multiple rapid calls
+function debounce(func, delay) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
+    };
+}
+
 // Initial injection
-addFloatingIcon();
+addSidebarToggleButtonToNavbar();
 
 // Re-add icon after soft navigations
-document.addEventListener('yt-navigate-finish', () => {
-    console.log('Page navigation detected, adding floating icon...');
-    addFloatingIcon();
-});
+document.addEventListener('yt-navigate-finish', debounce(() => {
+    console.log('Page navigation detected, adding sidebar toggle icon...');
+    addSidebarToggleButtonToNavbar();
+}, 200));
 
-const observer = new MutationObserver(() => {
-    addFloatingIcon();
-});
-observer.observe(document.body, { childList: true, subtree: true });
+// Ensure it works with dynamic content loading
+if (!window.observerInitialized) {
+    const observer = new MutationObserver(debounce(() => {
+        addSidebarToggleButtonToNavbar();
+    }, 200));
 
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.observerInitialized = true;
+    console.log('Observer initialized');
+}
 
 
 async function fetchAndInjectSidebar() {
     try {
         const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'));
-        console.log(response);
         if (!response.ok) {
             throw new Error(`Failed to fetch sidebar.html: ${response.status}`);
         }
         const sidebarHTML = await response.text();
 
-        const sidebar = document.createElement('div');
+        let sidebar = document.getElementById('sidebar-container');
+        if (sidebar) {
+            sidebar.remove();
+        }
+
+        sidebar = document.createElement('div');
         sidebar.id = 'sidebar-container';
         sidebar.innerHTML = sidebarHTML;
         document.body.appendChild(sidebar);
@@ -228,11 +256,21 @@ async function fetchAndInjectSidebar() {
         });
 
         document.getElementById('refresh-button').addEventListener('click', () => {
-            document.getElementById('summary').innerHTML = getLoadingState();
-            fetchAndDisplaySummary();
+            resetSummaryView();
+            clearSummary();
         });
 
-        fetchAndDisplaySummary();
+        setupGenerateSummaryButton();
+
+        // Load stored summary for the current video
+        const existingSummary = await retrieveSummary();
+        if (existingSummary) {
+            document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
+            updateTags(existingSummary.readingTime);
+            console.log('Loaded stored summary for current video');
+        } else {
+            resetSummaryView();
+        }
 
     } catch (error) {
         console.error('Failed to load sidebar:', error);
@@ -240,12 +278,55 @@ async function fetchAndInjectSidebar() {
 }
 
 
+
+function setupGenerateSummaryButton() {
+    const generateButton = document.getElementById('generate-summary-button');
+    if (generateButton) {
+        generateButton.addEventListener('click', () => {
+            document.getElementById('summary').innerHTML = getLoadingState();
+            fetchAndDisplaySummary();
+        });
+    }
+}
+
+function resetSummaryView() {
+    document.getElementById('summary').innerHTML = `
+        <div class="generate-summary-container">
+          <button id="generate-summary-button" class="generate-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Generate Summary
+          </button>
+          <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+        </div>
+    `;
+
+    // Re-add the event listener to the new button
+    setupGenerateSummaryButton();
+}
+
+
 async function fetchAndDisplaySummary() {
     try {
+        const videoId = getCurrentVideoId();
+
+        const existingSummary = await retrieveSummary();
+        if (existingSummary) {
+            document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
+            updateTags(existingSummary.readingTime);
+            console.log('Retrieved summary from storage');
+            return;
+        }
+
         const transcript = await getTranscript();
         if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
             const summary = await getSummary(transcript);
             const readingTime = calculateReadingTime(summary);
+
+            storeSummary(summary, readingTime); // Persist to local storage
+
             document.getElementById('summary').innerHTML = parseMarkdown(summary);
             updateTags(readingTime);
         } else {
@@ -256,6 +337,7 @@ async function fetchAndDisplaySummary() {
         document.getElementById('summary').innerHTML = '<p>Error fetching summary.</p>';
     }
 }
+
 
 
 function calculateReadingTime(text) {
@@ -287,3 +369,34 @@ document.addEventListener('keydown', (e) => {
         toggleSidebar(false);
     }
 });
+
+// Get current video ID
+function getCurrentVideoId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('v');
+}
+
+// Store summary
+async function storeSummary(summary, readingTime) {
+    const videoId = getCurrentVideoId();
+    await chrome.storage.local.set({
+        [videoId]: { text: summary, readingTime }
+    });
+    console.log('Stored summary for video:', videoId);
+}
+
+
+// Retrieve summary
+async function retrieveSummary() {
+    const videoId = getCurrentVideoId();
+    const data = await chrome.storage.local.get(videoId);
+    return data[videoId] || null; // Return summary only if it matches current video
+}
+
+
+// Clear summary
+async function clearSummary() {
+    const videoId = getCurrentVideoId();
+    await chrome.storage.local.remove(videoId);
+    console.log('Cleared summary for video:', videoId);
+}
