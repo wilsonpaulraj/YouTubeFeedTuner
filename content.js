@@ -1,3 +1,6 @@
+console.log('Content script loaded');
+
+
 async function waitForTranscriptButton(timeout = 10000) {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
@@ -130,13 +133,12 @@ function parseMarkdown(markdown) {
 async function getSummary(transcript) {
 
     const prompt = `
-    You are an expert at summarizes the youtube transcript.
-    a detailed summarize down to the main content of the video.
+        You are an expert summarizer of YouTube transcripts.  Provide a concise and informative summary of the *content* of the following transcript. Focus on the key information, arguments, and topics discussed.  Avoid phrases like "This video explains..." or "The speaker discusses...".  Instead, directly present the information as if you were explaining it to someone.
 
-    Summarize the following transcript:
-     ${transcript}
+        Transcript:
+        ${transcript}
 
-     `;
+        `;
 
     try {
         console.log('Attempting to get summary');
@@ -149,301 +151,252 @@ async function getSummary(transcript) {
     }
 }
 
+function addSidebarToggleButtonToNavbar() {
+    const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
+    const existingButton = document.getElementById('sidebar-toggle-icon');
 
-if (!document.getElementById('yt-summary-sidebar')) {
-    const sidebar = document.createElement('div');
-    sidebar.id = 'yt-summary-sideba2r';
+    // Ensure the container exists and the button is not already there
+    if (!buttonsContainer || existingButton) {
+        return;
+    }
 
-    sidebar.innerHTML = `
-<div id="yt-summary-sidebar" class="dark-theme">
-  <div class="sidebar-header">
-    <div class="header-left">
-      <div class="pulse-dot"></div>
-      <h2>AI Summary</h2>
-    </div>
-    <button id="refresh-button" class="action-button" aria-label="Refresh">
-      Refresh
-    </button>
-    <button id="close-sidebar" class="icon-button" aria-label="Close">
-      <svg viewBox="0 0 24 24" width="18" height="18">
-        <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-      </svg>
-    </button>
-  </div>
+    const sidebarToggleButton = document.createElement('div');
+    sidebarToggleButton.id = 'sidebar-toggle-icon';
+    sidebarToggleButton.innerHTML = `
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 5h16M4 12h10M4 19h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M19 15l-4 4l-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+    `;
+    sidebarToggleButton.style.cssText = `
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FF0000; /* Bright red */
+    transition: filter 0.3s ease; /* Use filter for icon glow */
+    filter: drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000); /* Initial glow */
+`;
 
-  <div class="content">
-    <div class="summary-container">
-      <div class="summary-header">
-        <div class="tags">
-          <span class="tag">AI Generated</span>
-          <span class="tag">Live</span>
+    sidebarToggleButton.addEventListener('mouseenter', () => {
+        sidebarToggleButton.style.filter = 'drop-shadow(0 0 8px #FF4500) drop-shadow(0 0 15px #FF4500)'; // Stronger glow on hover
+        sidebarToggleButton.style.color = '#FF4500'; // Slightly lighter red on hover
+    });
+
+    sidebarToggleButton.addEventListener('mouseleave', () => {
+        sidebarToggleButton.style.filter = 'drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000)'; // Original glow
+        sidebarToggleButton.style.color = '#FF0000';
+    });
+
+    sidebarToggleButton.addEventListener('click', () => {
+        fetchAndInjectSidebar();
+    });
+
+    buttonsContainer.appendChild(sidebarToggleButton);
+    console.log('Floating icon added');
+}
+
+// Debounce function to avoid multiple rapid calls
+function debounce(func, delay) {
+    let timeout;
+    return function (...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func(...args), delay);
+    };
+}
+
+// Initial injection
+addSidebarToggleButtonToNavbar();
+
+// Re-add icon after soft navigations
+document.addEventListener('yt-navigate-finish', debounce(() => {
+    console.log('Page navigation detected, adding sidebar toggle icon...');
+    addSidebarToggleButtonToNavbar();
+}, 200));
+
+// Ensure it works with dynamic content loading
+if (!window.observerInitialized) {
+    const observer = new MutationObserver(debounce(() => {
+        addSidebarToggleButtonToNavbar();
+    }, 200));
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    window.observerInitialized = true;
+    console.log('Observer initialized');
+}
+
+
+async function fetchAndInjectSidebar() {
+    try {
+        const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'));
+        if (!response.ok) {
+            throw new Error(`Failed to fetch sidebar.html: ${response.status}`);
+        }
+        const sidebarHTML = await response.text();
+
+        let sidebar = document.getElementById('sidebar-container');
+        if (sidebar) {
+            sidebar.remove();
+        }
+
+        sidebar = document.createElement('div');
+        sidebar.id = 'sidebar-container';
+        sidebar.innerHTML = sidebarHTML;
+        document.body.appendChild(sidebar);
+
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = chrome.runtime.getURL('ui/sidebar.css');
+        document.head.appendChild(link);
+
+        document.getElementById('close-sidebar').addEventListener('click', () => {
+            sidebar.remove();
+        });
+
+        document.getElementById('refresh-button').addEventListener('click', () => {
+            resetSummaryView();
+            clearSummary();
+        });
+
+        setupGenerateSummaryButton();
+
+        // Load stored summary for the current video
+        const existingSummary = await retrieveSummary();
+        if (existingSummary) {
+            document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
+            updateTags(existingSummary.readingTime);
+            console.log('Loaded stored summary for current video');
+        } else {
+            resetSummaryView();
+        }
+
+    } catch (error) {
+        console.error('Failed to load sidebar:', error);
+    }
+}
+
+
+
+function setupGenerateSummaryButton() {
+    const generateButton = document.getElementById('generate-summary-button');
+    if (generateButton) {
+        generateButton.addEventListener('click', () => {
+            document.getElementById('summary').innerHTML = getLoadingState();
+            fetchAndDisplaySummary();
+        });
+    }
+}
+
+function resetSummaryView() {
+    document.getElementById('summary').innerHTML = `
+        <div class="generate-summary-container">
+          <button id="generate-summary-button" class="generate-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Generate Summary
+          </button>
+          <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
         </div>
-        <button class="action-button" aria-label="Copy summary">
-          <svg viewBox="0 0 24 24" width="16" height="16">
-            <path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
-          </svg>
-          Copy
-        </button>
-      </div>
-
-      <div id="summary" class="summary-content">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <p>AI is analyzing the video...</p>
-          <div class="progress-bar">
-            <div class="progress" style="width: 60%"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<style>
-:root {
-  --bg-primary: #0f0f0f;
-  --bg-secondary: #1a1a1a;
-  --bg-accent: #2a2a2a;
-  --text-primary: #ffffff;
-  --text-secondary: #a0a0a0;
-  --accent-color: #3a86ff;
-  --accent-secondary: #2563eb;
-  --success-color: #22c55e;
-  --border-color: #333333;
-  --shadow-color: rgba(0, 0, 0, 0.4);
-}
-
-#yt-summary-sidebar {
-  position: fixed;
-  top: 0;
-  right: 0;
-  height: 100vh;
-  width: 400px;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -10px 0 30px var(--shadow-color);
-  z-index: 10000;
-}
-
-.sidebar-header {
-  padding: 20px 24px;
-  background-color: var(--bg-secondary);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-left h2 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.pulse-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  position: relative;
-}
-
-.pulse-dot::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: -4px;
-  width: 16px;
-  height: 16px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  opacity: 0.2;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  70% { transform: scale(1.2); opacity: 0; }
-  100% { transform: scale(0.8); opacity: 0; }
-}
-
-.content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
-
-.summary-container {
-  background: var(--bg-secondary);
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.summary-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.tags {
-  display: flex;
-  gap: 8px;
-}
-
-.tag {
-  background: var(--bg-accent);
-  color: var(--text-primary);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-}
-
-.tag:first-child {
-  background: linear-gradient(45deg, var(--accent-color), var(--accent-secondary));
-}
-
-.action-button {
-  background: var(--bg-accent);
-  border: none;
-  color: var(--text-primary);
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.action-button:hover {
-  background: var(--border-color);
-  transform: translateY(-1px);
-}
-
-.summary-content {
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.loading-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 40px 0;
-  color: var(--text-secondary);
-  text-align: center;
-}
-
-.spinner {
-  width: 30px;
-  height: 30px;
-  border: 2px solid var(--bg-accent);
-  border-top: 2px solid var(--accent-color);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-.progress-bar {
-  width: 100%;
-  height: 4px;
-  background: var(--bg-accent);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-top: 8px;
-}
-
-.progress {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent-color), var(--accent-secondary));
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.icon-button {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  color: var(--text-secondary);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.icon-button:hover {
-  background: var(--bg-accent);
-  color: var(--text-primary);
-}
-
-/* Scrollbar */
-.content::-webkit-scrollbar {
-  width: 5px;
-}
-
-.content::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-
-.content::-webkit-scrollbar-thumb {
-  background: var(--bg-accent);
-  border-radius: 20px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-  #yt-summary-sidebar {
-    width: 100%;
-  }
-
-  .content {
-    padding: 16px;
-  }
-}
-</style>
     `;
 
-    document.body.appendChild(sidebar);
+    // Re-add the event listener to the new button
+    setupGenerateSummaryButton();
+}
 
-    document.getElementById('close-sidebar').addEventListener('click', () => {
-        console.log('Closing sidebar');
-        sidebar.remove();
-    });
 
-    getTranscript().then(transcript => {
-        if (transcript != "") {
-            getSummary(transcript).then(summary => {
-                document.getElementById('summary').innerHTML = parseMarkdown(summary);
-            });
+async function fetchAndDisplaySummary() {
+    try {
+        const videoId = getCurrentVideoId();
+
+        const existingSummary = await retrieveSummary();
+        if (existingSummary) {
+            document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
+            updateTags(existingSummary.readingTime);
+            console.log('Retrieved summary from storage');
+            return;
         }
-    });
 
+        const transcript = await getTranscript();
+        if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
+            const summary = await getSummary(transcript);
+            const readingTime = calculateReadingTime(summary);
+
+            storeSummary(summary, readingTime); // Persist to local storage
+
+            document.getElementById('summary').innerHTML = parseMarkdown(summary);
+            updateTags(readingTime);
+        } else {
+            document.getElementById('summary').innerHTML = '<p>No transcript found or loaded.</p>';
+        }
+    } catch (error) {
+        console.error('Failed to fetch summary:', error);
+        document.getElementById('summary').innerHTML = '<p>Error fetching summary.</p>';
+    }
+}
+
+
+
+function calculateReadingTime(text) {
+    const words = text.split(/\s+/).length;
+    const readingTime = Math.ceil(words / 200); // 200 words per minute
+    return readingTime;
+}
+
+function updateTags(readingTime) {
+    const tagContainer = document.querySelector('.tag2');
+    tagContainer.innerText = readingTime + " min";
+    tagContainer.classList.add('tag');
+}
+
+function getLoadingState() {
+    return `
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>AI is analyzing the video...</p>
+                <div class="progress-bar">
+                    <div class="progress" style="width: 60%;"></div>
+                </div>
+            </div>
+        `;
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        toggleSidebar(false);
+    }
+});
+
+// Get current video ID
+function getCurrentVideoId() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('v');
+}
+
+// Store summary
+async function storeSummary(summary, readingTime) {
+    const videoId = getCurrentVideoId();
+    await chrome.storage.local.set({
+        [videoId]: { text: summary, readingTime }
+    });
+    console.log('Stored summary for video:', videoId);
+}
+
+
+// Retrieve summary
+async function retrieveSummary() {
+    const videoId = getCurrentVideoId();
+    const data = await chrome.storage.local.get(videoId);
+    return data[videoId] || null; // Return summary only if it matches current video
+}
+
+
+// Clear summary
+async function clearSummary() {
+    const videoId = getCurrentVideoId();
+    await chrome.storage.local.remove(videoId);
+    console.log('Cleared summary for video:', videoId);
 }

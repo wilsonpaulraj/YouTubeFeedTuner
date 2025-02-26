@@ -1,0 +1,258 @@
+<div id="yt-summary-sidebar" class="dark-theme" >
+  <div class="sidebar-header">
+    <div class="header-left">
+      <div class="pulse-dot"></div>
+      <h2>AI Summary</h2>
+    </div>
+    <div class="header-actions">
+      <button id="refresh-button" class="icon-button" aria-label="Refresh">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path fill="currentColor" d="M12 4V1L8 5l4 4V6a7 7 0 11-7 7h-2a9 9 0 109-9z" />
+        </svg>
+      </button>
+      <button id="close-sidebar" class="icon-button" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path fill="currentColor" d="M18.3 5.71a1 1 0 00-1.42 0L12 10.59 7.11 5.7a1 1 0 00-1.42 1.42L10.59 12l-4.9 4.89a1 1 0 101.42 1.42L12 13.41l4.89 4.9a1 1 0 101.42-1.42L13.41 12l4.9-4.89a1 1 0 000-1.42z" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="summary-container">
+      <div class="summary-header">
+        <div class="tags">
+            <div class="tag">Transcript Summary</div>
+            <div class="tag2"></div>
+        </div>
+        <button class="action-button" aria-label="Copy summary">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+        </button>
+      </div>
+
+      <div id="summary" class="summary-content">
+        <div class="generate-summary-container">
+          <button id="generate-summary-button" class="generate-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            Generate Summary
+          </button>
+          <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Base styles */
+#yt-summary-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 30%;
+  background-color: #0f0f0f;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important; /* Prevent scrollbar on main container */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbars */
+#yt-summary-sidebar::-webkit-scrollbar,
+.content::-webkit-scrollbar,
+.summary-container::-webkit-scrollbar,
+.summary-content::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+/* Header styles */
+.sidebar-header {
+  padding: 16px 20px;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-left h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Content area */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Summary container */
+.summary-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Button styles */
+.icon-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+  color: #fff;
+}
+
+.icon-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-button {
+  background: none;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Generate Summary Button */
+.generate-summary-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 30px 0;
+}
+
+.generate-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #3a86ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.generate-button:hover {
+  background-color: #2a76ef;
+}
+
+.info-text {
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+  margin: 0;
+}
+
+/* Tags */
+.tags {
+  display: flex;
+  gap: 8px;
+}
+
+.tag {
+  background: #2a2a2a;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Loading state */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #333;
+  border-top: 2px solid #3a86ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 4px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress {
+  height: 100%;
+  background: #3a86ff;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Pulse dot */
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #3a86ff;
+  border-radius: 50%;
+}
+</style>
