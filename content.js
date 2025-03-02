@@ -147,8 +147,6 @@ async function getSummary(transcript) {
     }
 }
 
-// The original fetchAndInjectSidebar function should remain unchanged
-// We're just modifying the button injection and observer logic
 
 function addSidebarToggleButtonToNavbar() {
     const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
@@ -222,25 +220,6 @@ document.addEventListener('yt-navigate-finish', debounce(() => {
     }
 }, 300));
 
-// Use the existing observer flag but improve the observer itself
-if (!window.observerInitialized) {
-    const observer = new MutationObserver(debounce(() => {
-        // Only try to add the button if it doesn't already exist
-        if (!document.getElementById('sidebar-toggle-icon')) {
-            addSidebarToggleButtonToNavbar();
-        }
-    }, 300));
-
-    // Observe only the necessary part of the DOM
-    const targetNode = document.querySelector('ytd-app') || document.body;
-    observer.observe(targetNode, {
-        childList: true,
-        subtree: true
-    });
-
-    window.observerInitialized = true;
-    console.log('Observer initialized with improved targeting');
-}
 
 function setupVideoNavigationWatcher() {
     // Store the current video ID to detect changes
@@ -286,8 +265,46 @@ function setupVideoNavigationWatcher() {
     setInterval(checkVideoChange, 2000);
 }
 
-async function fetchAndInjectSidebar() {
+// Add a hover trigger zone to the right side of the screen
+function addHoverTriggerZone() {
+    // Remove any existing trigger zone
+    const existingTrigger = document.getElementById('sidebar-hover-trigger');
+    if (existingTrigger) {
+        existingTrigger.remove();
+    }
+
+    // Create a new trigger zone
+    const triggerZone = document.createElement('div');
+    triggerZone.id = 'sidebar-hover-trigger';
+    triggerZone.style.cssText = `
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 20px;
+        height: 100%;
+        z-index: 9000;
+        opacity: 0;
+    `;
+
+    // Add hover event listeners
+    triggerZone.addEventListener('mouseenter', () => {
+        console.log('Hover detected on trigger zone');
+        fetchAndInjectSidebarWithAnimation();
+    });
+
+    document.body.appendChild(triggerZone);
+    console.log('Hover trigger zone added');
+}
+
+// Modified sidebar injection with animation
+async function fetchAndInjectSidebarWithAnimation() {
     try {
+        // Check if sidebar already exists
+        let sidebar = document.getElementById('sidebar-container');
+        if (sidebar) {
+            return;
+        }
+
         // Ensure the extension context is still valid
         if (!chrome.runtime?.getURL) {
             throw new Error('Extension context invalidated.');
@@ -300,28 +317,28 @@ async function fetchAndInjectSidebar() {
         }
         const sidebarHTML = await response.text();
 
-        // Remove existing sidebar if any
-        let sidebar = document.getElementById('sidebar-container');
-        if (sidebar) {
-            sidebar.remove();
-        }
-
         // Inject new sidebar
         sidebar = document.createElement('div');
         sidebar.id = 'sidebar-container';
         sidebar.innerHTML = sidebarHTML;
         document.body.appendChild(sidebar);
+        sidebar.style.cssText = `z-index: 4999;`;
 
         // Add sidebar stylesheet
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = chrome.runtime.getURL('ui/sidebar.css');
-        document.head.appendChild(link);
+        if (!document.getElementById('sidebar-styles')) {
+            const link = document.createElement('link');
+            link.id = 'sidebar-styles';
+            link.rel = 'stylesheet';
+            link.href = chrome.runtime.getURL('ui/sidebar.css');
+            document.head.appendChild(link);
+        }
 
         // Event listeners
         const closeButton = document.getElementById('close-sidebar');
         if (closeButton) {
-            closeButton.addEventListener('click', () => sidebar.remove());
+            closeButton.addEventListener('click', () => {
+                closeSidebarWithAnimation();
+            });
         }
 
         const refreshButton = document.getElementById('refresh-button');
@@ -331,6 +348,23 @@ async function fetchAndInjectSidebar() {
                 clearSummary();
             });
         }
+
+        // Create a close trigger zone outside the sidebar
+        const closeTrigger = document.createElement('div');
+        closeTrigger.id = 'sidebar-close-trigger';
+        closeTrigger.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: calc(100% - 350px);
+            height: 100%;
+            z-index: 8999;
+            opacity: 0;
+        `;
+        closeTrigger.addEventListener('click', () => {
+            closeSidebarWithAnimation();
+        });
+        document.body.appendChild(closeTrigger);
 
         // Load stored summary for the current video
         const existingSummary = await retrieveSummary();
@@ -352,6 +386,85 @@ async function fetchAndInjectSidebar() {
         console.error('Failed to load sidebar:', error);
     }
 }
+
+// Function to close sidebar with animation
+function closeSidebarWithAnimation() {
+    const sidebar = document.getElementById('sidebar-container');
+    if (!sidebar) return;
+
+    // Add the closing class to trigger the animation
+    sidebar.classList.add('closing');
+
+    // Wait for the animation to complete before removing the element
+    sidebar.addEventListener('animationend', () => {
+        sidebar.remove();
+
+        // Also remove the close trigger
+        const closeTrigger = document.getElementById('sidebar-close-trigger');
+        if (closeTrigger) closeTrigger.remove();
+    }, { once: true }); // Ensures the event listener is removed after firing once
+}
+
+
+// Update existing function to use the new animation version
+function fetchAndInjectSidebar() {
+    fetchAndInjectSidebarWithAnimation();
+}
+
+// Handle escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        closeSidebarWithAnimation();
+    }
+});
+
+// Modify the existing observer code to also add the hover trigger
+if (!window.observerInitialized) {
+    const observer = new MutationObserver(debounce(() => {
+        // Add the sidebar button if it doesn't exist
+        if (!document.getElementById('sidebar-toggle-icon')) {
+            addSidebarToggleButtonToNavbar();
+        }
+
+        // Add the hover trigger if it doesn't exist
+        if (!document.getElementById('sidebar-hover-trigger')) {
+            addHoverTriggerZone();
+        }
+    }, 300));
+
+    // Observe the necessary part of the DOM
+    const targetNode = document.querySelector('ytd-app') || document.body;
+    observer.observe(targetNode, {
+        childList: true,
+        subtree: true
+    });
+
+    window.observerInitialized = true;
+    console.log('Observer initialized with improved targeting');
+}
+
+// Initial setup
+setTimeout(() => {
+    addSidebarToggleButtonToNavbar();
+    addHoverTriggerZone();
+}, 1000);
+
+// Add the navigation event listener to also ensure hover trigger exists
+document.addEventListener('yt-navigate-finish', debounce(() => {
+    console.log('Page navigation detected');
+
+    // Add sidebar button if needed
+    if (!document.getElementById('sidebar-toggle-icon')) {
+        console.log('Adding sidebar toggle icon after navigation');
+        addSidebarToggleButtonToNavbar();
+    }
+
+    // Add hover trigger if needed
+    if (!document.getElementById('sidebar-hover-trigger')) {
+        console.log('Adding hover trigger after navigation');
+        addHoverTriggerZone();
+    }
+}, 300));
 
 function isWatchingVideo() {
     // Check if we're on a watch page with a video ID
