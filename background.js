@@ -1,6 +1,6 @@
 chrome.runtime.onInstalled.addListener(() => {
     console.log('YouTube Enhancer extension installed!');
-    
+
     // Initialize default settings
     chrome.storage.local.get('autoSkipSponsors', (data) => {
         if (data.autoSkipSponsors === undefined) {
