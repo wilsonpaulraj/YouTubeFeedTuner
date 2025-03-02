@@ -1,6 +1,5 @@
 console.log('Content script loaded');
 
-
 async function waitForTranscriptButton(timeout = 10000) {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
@@ -23,7 +22,7 @@ async function getTranscript() {
 
         if (!transcriptButton) {
             console.log('Transcript button not found');
-            return 'Transcript not available';
+            return 'NO_TRANSCRIPT';
         }
 
         transcriptButton.click();
@@ -33,19 +32,19 @@ async function getTranscript() {
         console.log('Waiting for 2 seconds');
 
         const transcriptContainer = document.querySelectorAll('ytd-transcript-segment-renderer');
-        if (!transcriptContainer) {
+        if (!transcriptContainer || transcriptContainer.length === 0) {
             console.log('Transcript container not found');
-            return 'Transcript not loaded';
+            return 'NO_TRANSCRIPT';
         }
         let transcript = "";
         for (let i = 0; i < transcriptContainer.length; i++) {
             transcript += transcriptContainer[i].innerText.split('\n').slice(1).join('\n') + ' ';
         }
-        console.log('Last Transcript:', transcriptContainer[transcriptContainer.length - 12].innerText);
-        return transcript;
+        console.log('Last Transcript:', transcriptContainer[transcriptContainer.length - 12]?.innerText || 'No transcript segments found');
+        return transcript.trim() ? transcript : 'NO_TRANSCRIPT';
     } catch (error) {
         console.error('Error fetching transcript:', error);
-        return 'Error fetching transcript';
+        return 'NO_TRANSCRIPT';
     }
 }
 
@@ -93,7 +92,6 @@ async function getLLMResponse(prompt) {
                         }]
                     }]
                 })
-
             });
 
             if (!response.ok) {
@@ -131,13 +129,11 @@ function parseMarkdown(markdown) {
 }
 
 async function getSummary(transcript) {
-
     const prompt = `
         You are an expert summarizer of YouTube transcripts.  Provide a concise and informative summary of the *content* of the following transcript. Focus on the key information, arguments, and topics discussed.  Avoid phrases like "This video explains..." or "The speaker discusses...".  Instead, directly present the information as if you were explaining it to someone.
 
         Transcript:
         ${transcript}
-
         `;
 
     try {
@@ -151,13 +147,16 @@ async function getSummary(transcript) {
     }
 }
 
+// The original fetchAndInjectSidebar function should remain unchanged
+// We're just modifying the button injection and observer logic
+
 function addSidebarToggleButtonToNavbar() {
     const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
     const existingButton = document.getElementById('sidebar-toggle-icon');
 
     // Ensure the container exists and the button is not already there
     if (!buttonsContainer || existingButton) {
-        return;
+        return; // Exit early if the container doesn't exist or button already exists
     }
 
     const sidebarToggleButton = document.createElement('div');
@@ -207,77 +206,195 @@ function debounce(func, delay) {
     };
 }
 
-// Initial injection
-addSidebarToggleButtonToNavbar();
-
-// Re-add icon after soft navigations
-document.addEventListener('yt-navigate-finish', debounce(() => {
-    console.log('Page navigation detected, adding sidebar toggle icon...');
+// Initial injection with a small delay
+setTimeout(() => {
     addSidebarToggleButtonToNavbar();
-}, 200));
+}, 1000);
 
-// Ensure it works with dynamic content loading
+// Re-add icon after soft navigations, but only if it doesn't exist
+document.addEventListener('yt-navigate-finish', debounce(() => {
+    console.log('Page navigation detected');
+    if (!document.getElementById('sidebar-toggle-icon')) {
+        console.log('Adding sidebar toggle icon after navigation');
+        addSidebarToggleButtonToNavbar();
+    } else {
+        console.log('Sidebar toggle icon already exists, skipping');
+    }
+}, 300));
+
+// Use the existing observer flag but improve the observer itself
 if (!window.observerInitialized) {
     const observer = new MutationObserver(debounce(() => {
-        addSidebarToggleButtonToNavbar();
-    }, 200));
+        // Only try to add the button if it doesn't already exist
+        if (!document.getElementById('sidebar-toggle-icon')) {
+            addSidebarToggleButtonToNavbar();
+        }
+    }, 300));
 
-    observer.observe(document.body, { childList: true, subtree: true });
+    // Observe only the necessary part of the DOM
+    const targetNode = document.querySelector('ytd-app') || document.body;
+    observer.observe(targetNode, {
+        childList: true,
+        subtree: true
+    });
+
     window.observerInitialized = true;
-    console.log('Observer initialized');
+    console.log('Observer initialized with improved targeting');
 }
 
+function setupVideoNavigationWatcher() {
+    // Store the current video ID to detect changes
+    let currentVideoId = getCurrentVideoId();
+
+    // Function to check if video has changed
+    const checkVideoChange = () => {
+        const newVideoId = getCurrentVideoId();
+
+        // If video ID changed (including from null to a value)
+        if (newVideoId !== currentVideoId) {
+            console.log('Video changed from', currentVideoId, 'to', newVideoId);
+            currentVideoId = newVideoId;
+
+            // Update sidebar if it exists
+            const sidebar = document.getElementById('sidebar-container');
+            if (sidebar) {
+                resetSummaryView();
+
+                // If we navigated to a valid video, also check for stored summary
+                if (newVideoId) {
+                    retrieveSummary().then(existingSummary => {
+                        if (existingSummary) {
+                            const summaryElement = document.getElementById('summary');
+                            if (summaryElement) {
+                                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
+                                updateTags(existingSummary.readingTime);
+                                console.log('Loaded stored summary for new video');
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    };
+
+    // Check on YouTube navigation events
+    document.addEventListener('yt-navigate-finish', () => {
+        setTimeout(checkVideoChange, 500); // Slight delay to ensure URL is updated
+    });
+
+    // Also set up a regular polling as a fallback (some navigations might not trigger events)
+    setInterval(checkVideoChange, 2000);
+}
 
 async function fetchAndInjectSidebar() {
     try {
+        // Ensure the extension context is still valid
+        if (!chrome.runtime?.getURL) {
+            throw new Error('Extension context invalidated.');
+        }
+
+        // Fetch sidebar HTML
         const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'));
         if (!response.ok) {
             throw new Error(`Failed to fetch sidebar.html: ${response.status}`);
         }
         const sidebarHTML = await response.text();
 
+        // Remove existing sidebar if any
         let sidebar = document.getElementById('sidebar-container');
         if (sidebar) {
             sidebar.remove();
         }
 
+        // Inject new sidebar
         sidebar = document.createElement('div');
         sidebar.id = 'sidebar-container';
         sidebar.innerHTML = sidebarHTML;
         document.body.appendChild(sidebar);
 
+        // Add sidebar stylesheet
         const link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = chrome.runtime.getURL('ui/sidebar.css');
         document.head.appendChild(link);
 
-        document.getElementById('close-sidebar').addEventListener('click', () => {
-            sidebar.remove();
-        });
+        // Event listeners
+        const closeButton = document.getElementById('close-sidebar');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => sidebar.remove());
+        }
 
-        document.getElementById('refresh-button').addEventListener('click', () => {
-            resetSummaryView();
-            clearSummary();
-        });
-
-        setupGenerateSummaryButton();
+        const refreshButton = document.getElementById('refresh-button');
+        if (refreshButton) {
+            refreshButton.addEventListener('click', () => {
+                resetSummaryView();
+                clearSummary();
+            });
+        }
 
         // Load stored summary for the current video
         const existingSummary = await retrieveSummary();
         if (existingSummary) {
-            document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
+            const summaryElement = document.getElementById('summary');
+            if (summaryElement) {
+                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
+            }
             updateTags(existingSummary.readingTime);
             console.log('Loaded stored summary for current video');
         } else {
             resetSummaryView();
         }
 
+        // Set up the video navigation watcher to auto-update the sidebar
+        setupVideoNavigationWatcher();
+
     } catch (error) {
         console.error('Failed to load sidebar:', error);
     }
 }
 
+function isWatchingVideo() {
+    // Check if we're on a watch page with a video ID
+    return window.location.pathname === '/watch' && new URLSearchParams(window.location.search).get('v');
+}
 
+function resetSummaryView() {
+    const summaryElement = document.getElementById('summary');
+    if (!summaryElement) return;
+
+    if (!isWatchingVideo()) {
+        // User is not watching a video - show disabled state
+        summaryElement.innerHTML = `
+            <div class="generate-summary-container">
+                <button id="generate-summary-button" class="generate-button disabled" disabled>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    Generate Summary
+                </button>
+                <p class="info-text">You have to open a video to get it's summary</p>
+            </div>
+        `;
+    } else {
+        // User is watching a video - show active state
+        summaryElement.innerHTML = `
+            <div class="generate-summary-container">
+                <button id="generate-summary-button" class="generate-button">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                    </svg>
+                    Generate Summary
+                </button>
+                <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+            </div>
+        `;
+
+        // Re-add the event listener to the new button
+        setupGenerateSummaryButton();
+    }
+}
 
 function setupGenerateSummaryButton() {
     const generateButton = document.getElementById('generate-summary-button');
@@ -289,27 +406,17 @@ function setupGenerateSummaryButton() {
     }
 }
 
-function resetSummaryView() {
-    document.getElementById('summary').innerHTML = `
-        <div class="generate-summary-container">
-          <button id="generate-summary-button" class="generate-button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
-            </svg>
-            Generate Summary
-          </button>
-          <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
-        </div>
-    `;
-
-    // Re-add the event listener to the new button
-    setupGenerateSummaryButton();
-}
-
-
 async function fetchAndDisplaySummary() {
     try {
+        if (!isWatchingVideo()) {
+            document.getElementById('summary').innerHTML = `
+                <div class="no-video-message">
+                    <p>Please navigate to a YouTube video to generate a summary.</p>
+                </div>
+            `;
+            return;
+        }
+
         const videoId = getCurrentVideoId();
 
         const existingSummary = await retrieveSummary();
@@ -321,7 +428,7 @@ async function fetchAndDisplaySummary() {
         }
 
         const transcript = await getTranscript();
-        if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
+        if (transcript && transcript !== "NO_TRANSCRIPT") {
             const summary = await getSummary(transcript);
             const readingTime = calculateReadingTime(summary);
 
@@ -330,15 +437,34 @@ async function fetchAndDisplaySummary() {
             document.getElementById('summary').innerHTML = parseMarkdown(summary);
             updateTags(readingTime);
         } else {
-            document.getElementById('summary').innerHTML = '<p>No transcript found or loaded.</p>';
+            // Show user-friendly message when no transcript is found
+            document.getElementById('summary').innerHTML = `
+                <div class="no-transcript-message">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p>Unable to generate summary because this video doesn't have a transcript.</p>
+                    <p class="secondary-text">Try videos with captions or subtitles enabled.</p>
+                </div>
+            `;
         }
     } catch (error) {
         console.error('Failed to fetch summary:', error);
-        document.getElementById('summary').innerHTML = '<p>Error fetching summary.</p>';
+        document.getElementById('summary').innerHTML = `
+            <div class="error-message">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <p>Something went wrong while generating the summary.</p>
+                <p class="secondary-text">Please try again later.</p>
+            </div>
+        `;
     }
 }
-
-
 
 function calculateReadingTime(text) {
     const words = text.split(/\s+/).length;
@@ -348,25 +474,30 @@ function calculateReadingTime(text) {
 
 function updateTags(readingTime) {
     const tagContainer = document.querySelector('.tag2');
-    tagContainer.innerText = readingTime + " min";
-    tagContainer.classList.add('tag');
+    if (tagContainer) {
+        tagContainer.innerText = readingTime + " min";
+        tagContainer.classList.add('tag');
+    }
 }
 
 function getLoadingState() {
     return `
-            <div class="loading-state">
-                <div class="spinner"></div>
-                <p>AI is analyzing the video...</p>
-                <div class="progress-bar">
-                    <div class="progress" style="width: 60%;"></div>
-                </div>
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>AI is analyzing the video...</p>
+            <div class="progress-bar">
+                <div class="progress" style="width: 60%;"></div>
             </div>
-        `;
+        </div>
+    `;
 }
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-        toggleSidebar(false);
+        const sidebar = document.getElementById('sidebar-container');
+        if (sidebar) {
+            sidebar.remove();
+        }
     }
 });
 
@@ -379,24 +510,30 @@ function getCurrentVideoId() {
 // Store summary
 async function storeSummary(summary, readingTime) {
     const videoId = getCurrentVideoId();
+    if (!videoId) return;
+
     await chrome.storage.local.set({
         [videoId]: { text: summary, readingTime }
     });
     console.log('Stored summary for video:', videoId);
 }
 
-
 // Retrieve summary
 async function retrieveSummary() {
     const videoId = getCurrentVideoId();
+    if (!videoId) return null;
+
     const data = await chrome.storage.local.get(videoId);
     return data[videoId] || null; // Return summary only if it matches current video
 }
 
-
 // Clear summary
 async function clearSummary() {
     const videoId = getCurrentVideoId();
-    await chrome.storage.local.remove(videoId);
+    if (!videoId) {
+        console.error('No video ID found.');
+        return;
+    }
+    await chrome.storage.local.remove([videoId]);
     console.log('Cleared summary for video:', videoId);
 }
