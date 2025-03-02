@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Video Summarizer",
+  "name": "YouTube Video Enhancer",
   "version": "1.0",
-  "description": "Get transcripts and AI-generated summaries for YouTube videos.",
-  "permissions": ["storage", "scripting", "activeTab"],
+  "description": "Get AI-generated summaries, notes, chapters, and sponsor detection for YouTube videos.",
+  "permissions": ["storage", "scripting", "activeTab", "downloads"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
     "service_worker": "background.js"
@@ -28,5 +28,4 @@
       "matches": ["https://www.youtube.com/*"]
     }
   ]
-
 }
