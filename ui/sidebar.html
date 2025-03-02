@@ -2,7 +2,7 @@
   <div class="sidebar-header">
     <div class="header-left">
       <div class="pulse-dot"></div>
-      <h2>AI Summary</h2>
+      <h2>YouTube Enhancer</h2>
     </div>
     <div class="header-actions">
       <button id="refresh-button" class="icon-button" aria-label="Refresh">
@@ -18,31 +18,119 @@
     </div>
   </div>
 
-  <div class="content">
-    <div class="summary-container">
-      <div class="summary-header">
-        <div class="tags">
-            <div class="tag">Transcript Summary</div>
-            <div class="tag2"></div>
-        </div>
-        <button class="action-button" aria-label="Copy summary">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-            </svg>
-        </button>
-      </div>
+  <div class="tab-navigation">
+    <button class="tab-button active" data-tab="summary">Summary</button>
+    <button class="tab-button" data-tab="notes">Notes</button>
+    <button class="tab-button" data-tab="chapters">Chapters</button>
+    <button class="tab-button" data-tab="sponsors">Sponsors</button>
+  </div>
 
-      <div id="summary" class="summary-content">
-        <div class="generate-summary-container">
-          <button id="generate-summary-button" class="generate-button">
+  <div class="content">
+    <!-- Summary Tab -->
+    <div class="tab-content active" id="summary-tab">
+      <div class="summary-container">
+        <div class="summary-header">
+          <div class="tags">
+              <div class="tag">Transcript Summary</div>
+              <div class="tag2"></div>
+          </div>
+          <button class="action-button" id="copy-summary-button" aria-label="Copy summary">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+          </button>
+        </div>
+
+        <div id="summary" class="summary-content">
+          <div class="generate-summary-container">
+            <button id="generate-summary-button" class="generate-button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              Generate Summary
+            </button>
+            <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes Tab -->
+    <div class="tab-content" id="notes-tab">
+      <div class="notes-container">
+        <div class="notes-header">
+          <h3>Video Notes</h3>
+          <div class="notes-actions">
+            <button id="save-notes-button" class="action-button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                <polyline points="7 3 7 8 15 8"></polyline>
+              </svg>
+              Save
+            </button>
+            <button id="export-notes-button" class="action-button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              Export
+            </button>
+          </div>
+        </div>
+        <textarea id="notes-area" placeholder="Take notes about this video here..."></textarea>
+        <div class="timestamp-actions">
+          <button id="add-timestamp-button" class="action-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            Add Timestamp
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chapters Tab -->
+    <div class="tab-content" id="chapters-tab">
+      <div class="chapters-container">
+        <div class="chapters-header">
+          <h3>Video Chapters</h3>
+          <button id="generate-chapters-button" class="generate-button">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
               <polyline points="22 4 12 14.01 9 11.01"></polyline>
             </svg>
-            Generate Summary
+            Generate Chapters
           </button>
-          <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+        </div>
+        <div id="chapters-list" class="chapters-list">
+          <p class="info-text">Click the button above to analyze the video and generate AI chapters.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sponsors Tab -->
+    <div class="tab-content" id="sponsors-tab">
+      <div class="sponsors-container">
+        <div class="sponsors-header">
+          <h3>Sponsor Segments</h3>
+          <div class="sponsor-toggle">
+            <label class="switch">
+              <input type="checkbox" id="sponsor-blocker-toggle">
+              <span class="slider round"></span>
+            </label>
+            <span>Auto-Skip Sponsors</span>
+          </div>
+        </div>
+        <div id="sponsors-list" class="sponsors-list">
+          <div class="loading-sponsors">
+            <p class="info-text">Detecting sponsor segments...</p>
+          </div>
         </div>
       </div>
     </div>
@@ -65,6 +153,7 @@
   overflow: hidden !important; /* Prevent scrollbar on main container */
   -ms-overflow-style: none;
   scrollbar-width: none;
+  z-index: 9999;
 }
 
 /* Hide scrollbars */
@@ -99,6 +188,54 @@
   font-weight: 500;
 }
 
+/* Tab Navigation */
+.tab-navigation {
+  display: flex;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid #333;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tab-navigation::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-button {
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  text-align: center;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-button:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.tab-button.active {
+  color: #3a86ff;
+  border-bottom: 2px solid #3a86ff;
+}
+
+/* Tab Content */
+.tab-content {
+  display: none;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.tab-content.active {
+  display: block;
+}
+
 /* Content area */
 .content {
   flex: 1;
@@ -121,6 +258,204 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+}
+
+/* Notes styles */
+.notes-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+  height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.notes-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.notes-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#notes-area {
+  flex: 1;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  margin-bottom: 16px;
+}
+
+.timestamp-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+/* Chapters styles */
+.chapters-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.chapters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.chapters-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.chapters-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chapter-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.chapter-item:hover {
+  background: #333;
+}
+
+.chapter-timestamp {
+  font-family: monospace;
+  color: #3a86ff;
+  font-weight: 500;
+}
+
+/* Sponsors styles */
+.sponsors-container {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.sponsors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.sponsors-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.sponsor-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #333;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #3a86ff;
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.sponsors-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sponsor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 8px;
+}
+
+.sponsor-time {
+  display: flex;
+  gap: 8px;
+  font-family: monospace;
+}
+
+.sponsor-category {
+  background: #3a86ff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 /* Button styles */
