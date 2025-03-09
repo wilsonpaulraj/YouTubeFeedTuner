@@ -1,7 +1,7 @@
 console.log('Content script loaded');
 
 // Note-taking functionality
-let videoNotes = {};
+var videoNotes = {};
 
 async function saveNotes(notes) {
     const videoId = getCurrentVideoId();
@@ -252,9 +252,9 @@ async function detectSponsors() {
     `;
 
     try {
-        console.log('Detecting sponsors...');
+        // console.log('Detecting sponsors...');
         const response = await getLLMResponse(prompt);
-        console.log('Sponsors response:', response);
+        // console.log('Sponsors response:', response);
 
         // Parse the JSON response
         let sponsors;
@@ -382,37 +382,57 @@ async function waitForTranscriptButton(timeout = 10000) {
 
 async function getTranscript() {
     try {
-        console.log('Attempting to get transcript');
-        console.log('Waiting for transcript button...');
+        // console.log('Attempting to get transcript');
+        // console.log('Waiting for transcript button...');
         const transcriptButton = await waitForTranscriptButton();
 
         if (!transcriptButton) {
-            console.log('Transcript button not found');
+            // console.log('Transcript button not found');
             return 'Transcript not available';
         }
 
         transcriptButton.click();
-        console.log('Clicked transcript button');
+        // console.log('Clicked transcript button');
 
         await new Promise(resolve => setTimeout(resolve, 2000));
         console.log('Waiting for 2 seconds');
 
         const transcriptContainer = document.querySelectorAll('ytd-transcript-segment-renderer');
-        if (!transcriptContainer) {
-            console.log('Transcript container not found');
+        if (!transcriptContainer.length) {
+            // console.log('Transcript container not found');
+
+            // Attempt to close the transcript if opened but empty
+            const closeButton = document.querySelector('button[aria-label="Close transcript"]');
+            if (closeButton) {
+                closeButton.click();
+                console.log('Closed transcript');
+            }
+
             return 'Transcript not loaded';
         }
+
         let transcript = "";
-        for (let i = 0; i < transcriptContainer.length; i++) {
-            transcript += transcriptContainer[i].innerText.split('\n').slice(1).join('\n') + ' ';
+        transcriptContainer.forEach(segment => {
+            transcript += segment.innerText.split('\n').slice(1).join(' ') + ' ';
+        });
+        // console.log('Transcript fetched:', transcript.trim());
+
+        // Close the transcript after fetching
+        const closeButton = document.querySelector('button[aria-label="Close transcript"]');
+        if (closeButton) {
+            closeButton.click();
+            // console.log('Closed transcript');
+        } else {
+            // console.log('Close button not found');
         }
-        console.log('Last Transcript:', transcriptContainer[transcriptContainer.length - 12].innerText);
-        return transcript;
+
+        return transcript.trim();
     } catch (error) {
         console.error('Error fetching transcript:', error);
         return 'Error fetching transcript';
     }
 }
+
 
 async function getLLMResponse(prompt) {
     const API_KEY = 'AIzaSyB8Ha0uHwNqFfVoD9iAjCQbH4Yb9rbGSO8';
@@ -441,10 +461,10 @@ async function getLLMResponse(prompt) {
             }
             lastRequestTime = Date.now();
 
-            console.log('Making API request...', {
-                timestamp: new Date().toISOString(),
-                prompt: prompt.substring(0, 50) + '...'
-            });
+            // console.log('Making API request...', {
+            //     timestamp: new Date().toISOString(),
+            //     prompt: prompt.substring(0, 50) + '...'
+            // });
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`, {
                 method: 'POST',
@@ -466,10 +486,10 @@ async function getLLMResponse(prompt) {
             }
 
             const data = await response.json();
-            console.log('API response received:', data);
+            // console.log('API response received:', data);
 
             const generatedCode = data.candidates[0].content.parts[0].text;
-            console.log("Generated Code:\n", generatedCode);
+            // console.log("Generated Code:\n", generatedCode);
             return generatedCode;
 
         } catch (error) {
@@ -557,6 +577,7 @@ function addSidebarToggleButtonToNavbar() {
 
     sidebarToggleButton.addEventListener('click', () => {
         fetchAndInjectSidebar();
+        adjustSidebarWidth();
     });
 
     buttonsContainer.appendChild(sidebarToggleButton);
@@ -628,35 +649,35 @@ function setupVideoNavigationWatcher() {
 }
 
 // Add a hover trigger zone to the right side of the screen
-function addHoverTriggerZone() {
-    // Remove any existing trigger zone
-    const existingTrigger = document.getElementById('sidebar-hover-trigger');
-    if (existingTrigger) {
-        existingTrigger.remove();
-    }
+// function addHoverTriggerZone() {
+//     // Remove any existing trigger zone
+//     const existingTrigger = document.getElementById('sidebar-hover-trigger');
+//     if (existingTrigger) {
+//         existingTrigger.remove();
+//     }
 
-    // Create a new trigger zone
-    const triggerZone = document.createElement('div');
-    triggerZone.id = 'sidebar-hover-trigger';
-    triggerZone.style.cssText = `
-        position: fixed;
-        top: 0;
-        right: 0;
-        width: 20px;
-        height: 100%;
-        z-index: 9000;
-        opacity: 0;
-    `;
+//     // Create a new trigger zone
+//     const triggerZone = document.createElement('div');
+//     triggerZone.id = 'sidebar-hover-trigger';
+//     triggerZone.style.cssText = `
+//         position: fixed;
+//         top: 0;
+//         right: 0;
+//         width: 20px;
+//         height: 100%;
+//         z-index: 9000;
+//         opacity: 0;
+//     `;
 
-    // Add hover event listeners
-    triggerZone.addEventListener('mouseenter', () => {
-        console.log('Hover detected on trigger zone');
-        fetchAndInjectSidebarWithAnimation();
-    });
+//     // Add hover event listeners
+//     triggerZone.addEventListener('mouseenter', () => {
+//         console.log('Hover detected on trigger zone');
+//         fetchAndInjectSidebarWithAnimation();
+//     });
 
-    document.body.appendChild(triggerZone);
-    console.log('Hover trigger zone added');
-}
+//     document.body.appendChild(triggerZone);
+//     console.log('Hover trigger zone added');
+// }
 
 
 // Fetch and inject sidebar with animation
@@ -686,6 +707,7 @@ async function fetchAndInjectSidebarWithAnimation() {
         sidebar.id = 'sidebar-container';
         sidebar.innerHTML = sidebarHTML;
         document.body.appendChild(sidebar);
+        adjustSidebarWidth();
 
         // Add sidebar stylesheet
         if (!document.getElementById('sidebar-styles')) {
@@ -713,21 +735,21 @@ async function fetchAndInjectSidebarWithAnimation() {
         }
 
         // Create a close trigger zone outside the sidebar
-        const closeTrigger = document.createElement('div');
-        closeTrigger.id = 'sidebar-close-trigger';
-        closeTrigger.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: calc(100% - 350px);
-            height: 100%;
-            z-index: 8999;
-            opacity: 0;
-        `;
-        closeTrigger.addEventListener('click', () => {
-            closeSidebarWithAnimation();
-        });
-        document.body.appendChild(closeTrigger);
+        // const closeTrigger = document.createElement('div');
+        // closeTrigger.id = 'sidebar-close-trigger';
+        // closeTrigger.style.cssText = `
+        //     position: fixed;
+        //     top: 0;
+        //     left: 0;
+        //     width: calc(100% - 350px);
+        //     height: 100%;
+        //     z-index: 8999;
+        //     opacity: 0;
+        // `;
+        // closeTrigger.addEventListener('click', () => {
+        //     closeSidebarWithAnimation();
+        // });
+        // document.body.appendChild(closeTrigger);
 
         setupGenerateSummaryButton();
         setupTabNavigation();
@@ -769,15 +791,47 @@ function closeSidebarWithAnimation() {
         sidebar.remove();
 
         // Also remove the close trigger
-        const closeTrigger = document.getElementById('sidebar-close-trigger');
-        if (closeTrigger) closeTrigger.remove();
+        // const closeTrigger = document.getElementById('sidebar-close-trigger');
+        // if (closeTrigger) closeTrigger.remove();
     }, { once: true }); // Ensures the event listener is removed after firing once
 }
+
+function adjustSidebarWidth() {
+    console.log('Adjusting sidebar width...');
+
+    const secondary = document.querySelector('#secondary.style-scope.ytd-watch-flexy');
+    const sidebarContainer = document.getElementById('sidebar-container');
+    if (!secondary) {
+        console.warn('Secondary container not found.');
+        return;
+    }
+
+    // Get the starting position of the secondary container (from the left)
+    const secondaryRect = secondary.getBoundingClientRect();
+    const sidebarStart = secondaryRect.left;
+
+    // Calculate the width from the secondary container to the right edge of the viewport
+    const sidebarWidth = window.innerWidth - sidebarStart;
+
+    console.log('Secondary container starts at:', sidebarStart);
+    console.log('Calculated sidebar width:', sidebarWidth);
+
+    // Set sidebar position and width
+    sidebarContainer.style.top = '0';
+    sidebarContainer.style.left = `${sidebarStart}px`;
+    sidebarContainer.style.width = `${sidebarWidth}px`;
+}
+
+// Adjust sidebar width initially and on window resize
+window.addEventListener('resize', adjustSidebarWidth);
+window.addEventListener('load', adjustSidebarWidth);
+
 
 
 // Update existing function to use the new animation version
 function fetchAndInjectSidebar() {
     fetchAndInjectSidebarWithAnimation();
+    adjustSidebarWidth();
 }
 
 // Handle escape key
@@ -795,10 +849,10 @@ if (!window.observerInitialized) {
             addSidebarToggleButtonToNavbar();
         }
 
-        // Add the hover trigger if it doesn't exist
-        if (!document.getElementById('sidebar-hover-trigger')) {
-            addHoverTriggerZone();
-        }
+        // // Add the hover trigger if it doesn't exist
+        // if (!document.getElementById('sidebar-hover-trigger')) {
+        //     addHoverTriggerZone();
+        // }
     }, 300));
 
     // Observe the necessary part of the DOM
@@ -814,7 +868,7 @@ if (!window.observerInitialized) {
 // Initial setup
 setTimeout(() => {
     addSidebarToggleButtonToNavbar();
-    addHoverTriggerZone();
+    // addHoverTriggerZone();
 }, 1000);
 
 // Add the navigation event listener to also ensure hover trigger exists
@@ -828,10 +882,10 @@ document.addEventListener('yt-navigate-finish', debounce(() => {
     }
 
     // Add hover trigger if needed
-    if (!document.getElementById('sidebar-hover-trigger')) {
-        console.log('Adding hover trigger after navigation');
-        addHoverTriggerZone();
-    }
+    // if (!document.getElementById('sidebar-hover-trigger')) {
+    //     console.log('Adding hover trigger after navigation');
+    //     addHoverTriggerZone();
+    // }
 }, 300));
 
 function isWatchingVideo() {

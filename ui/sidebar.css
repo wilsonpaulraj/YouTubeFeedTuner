@@ -9,6 +9,7 @@
   --success-color: #22c55e;
   --border-color: #333333;
   --shadow-color: rgba(0, 0, 0, 0.4);
+  --video-player-width: 70%;
 }
 
 @keyframes slideIn {
@@ -28,15 +29,19 @@
   top: 0;
   right: 0;
   height: 100vh;
-  width: 400px;
+  width: 100%;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   display: flex;
   flex-direction: column;
-  box-shadow: -10px 0 30px var(--shadow-color);
+  overflow: hidden !important;
+  box-shadow: -2px 0 30px var(--shadow-color);
   z-index: 10000;
 }
+
+
+
 
 #yt-summary-sidebar::-webkit-scrollbar,
 .content::-webkit-scrollbar,
@@ -54,7 +59,9 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: 400px; /* Adjust based on your design */
+    width: calc(100% - var(--video-player-width, 100%)); /* Sidebar width adjusts dynamically */
+    min-width: 300px;
+    /* max-width: 600px; */
     height: 100vh;
 }
 
