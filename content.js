@@ -1,7 +1,5 @@
-console.log('Content script loaded');
-
 // Note-taking functionality
-var videoNotes = {};
+let videoNotes = {};
 
 async function saveNotes(notes) {
     const videoId = getCurrentVideoId();
@@ -22,6 +20,11 @@ function setupNotesFeature() {
     const saveNotesButton = document.getElementById('save-notes-button');
     const addTimestampButton = document.getElementById('add-timestamp-button');
     const exportNotesButton = document.getElementById('export-notes-button');
+    const boldButton = document.getElementById("bold-button");
+    const italicButton = document.getElementById("italic-button");
+    const underlineButton = document.getElementById("underline-button");
+    const snapshotButton = document.getElementById("snapshot-button");
+    const importNotesButton = document.getElementById("import-notes-button");
 
     // Load saved notes
     retrieveNotes().then(notes => {
@@ -51,7 +54,7 @@ function setupNotesFeature() {
         if (video) {
             const currentTime = video.currentTime;
             const formattedTime = formatTime(currentTime);
-            const timestampText = `[${formattedTime}] `;
+            const timestampText = `[${formattedTime}](https://www.youtube.com/watch?v=VIDEO_ID&t=83s) `; // Added link
 
             // Insert at cursor position or at the end
             const cursorPos = notesArea.selectionStart;
@@ -68,13 +71,16 @@ function setupNotesFeature() {
         }
     });
 
-    // Export notes button
+    // Export notes button (Markdown)
     exportNotesButton.addEventListener('click', () => {
         const videoTitle = document.querySelector('h1.title.style-scope.ytd-video-primary-info-renderer')?.textContent || 'YouTube Video';
+        const videoUrl = window.location.href;
         const cleanTitle = videoTitle.trim().replace(/[^\w\s-]/g, '');
-        const filename = `${cleanTitle} - Notes.txt`;
+        const filename = `${cleanTitle} - Notes.md`;
 
-        const blob = new Blob([notesArea.value], { type: 'text/plain' });
+        let markdownContent = `# ${videoTitle}\n\n${videoUrl}\n\n${notesArea.value}`;
+
+        const blob = new Blob([markdownContent], { type: 'text/markdown' });
         const url = URL.createObjectURL(blob);
 
         const a = document.createElement('a');
@@ -85,6 +91,58 @@ function setupNotesFeature() {
         URL.revokeObjectURL(url);
         showToast('Notes exported successfully!');
     });
+
+    function applyStyle(style) {
+        document.execCommand(style, false, null);
+    }
+
+    boldButton.addEventListener("click", () => applyStyle("bold"));
+    italicButton.addEventListener("click", () => applyStyle("italic"));
+    underlineButton.addEventListener("click", () => applyStyle("underline"));
+
+    // Snapshot button
+    snapshotButton.addEventListener("click", () => {
+        const video = document.querySelector("video");
+        if (video) {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL("image/jpeg");
+            console.log(dataUrl)
+
+            uploadImage(dataUrl).then(imageUrl => {
+                const currentTime = video.currentTime;
+                const formattedTime = formatTime(currentTime);
+                const imageMarkdown = `\n![Snapshot at ${formattedTime}](${imageUrl})\n`;
+                notesArea.value += imageMarkdown;
+                saveNotes(notesArea.value);
+            });
+        }
+    });
+
+    // Import notes button
+    importNotesButton.addEventListener("click", () => {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".md";
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                notesArea.value = e.target.result;
+                saveNotes(notesArea.value);
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    });
+}
+async function uploadImage(dataUrl) {
+    // Implement image upload logic here (e.g., to Imgur, AWS S3)
+    // Replace with your actual upload code.
+    // For example, using a placeholder:
+    return "https://via.placeholder.com/150";
 }
 
 function formatTime(seconds) {
@@ -103,7 +161,6 @@ function formatTime(seconds) {
 }
 
 function showToast(message) {
-    // Create toast element if it doesn't exist
     let toast = document.getElementById('yt-enhancer-toast');
     if (!toast) {
         toast = document.createElement('div');
@@ -127,15 +184,14 @@ function showToast(message) {
         document.body.appendChild(toast);
     }
 
-    // Set message and show toast
     toast.textContent = message;
     toast.style.opacity = '1';
 
-    // Hide toast after 3 seconds
     setTimeout(() => {
         toast.style.opacity = '0';
     }, 3000);
 }
+
 
 // Video chapters generation functionality
 async function generateChapters(transcript) {
@@ -801,25 +857,34 @@ function adjustSidebarWidth() {
 
     const secondary = document.querySelector('#secondary.style-scope.ytd-watch-flexy');
     const sidebarContainer = document.getElementById('sidebar-container');
+    if (!sidebarContainer) {
+        return;
+    }
     if (!secondary) {
-        console.warn('Secondary container not found.');
         return;
     }
 
     // Get the starting position of the secondary container (from the left)
     const secondaryRect = secondary.getBoundingClientRect();
     const sidebarStart = secondaryRect.left;
+    const secondaryWidth = secondaryRect.width;
 
-    // Calculate the width from the secondary container to the right edge of the viewport
-    const sidebarWidth = window.innerWidth - sidebarStart;
 
-    console.log('Secondary container starts at:', sidebarStart);
-    console.log('Calculated sidebar width:', sidebarWidth);
+    if (secondaryWidth === 0 && sidebarContainer) {
+        sidebarContainer.style.width = '450px';
+        return;
 
-    // Set sidebar position and width
-    sidebarContainer.style.top = '0';
-    sidebarContainer.style.left = `${sidebarStart}px`;
-    sidebarContainer.style.width = `${sidebarWidth}px`;
+    } else {
+        // Calculate the width from the secondary container to the right edge of the viewport
+        const sidebarWidth = window.innerWidth - sidebarStart;
+        console.log('Secondary container starts at:', sidebarStart);
+        console.log('Calculated sidebar width:', sidebarWidth);
+
+        // Set sidebar position and width
+        sidebarContainer.style.top = '0';
+        sidebarContainer.style.left = `${sidebarStart}px`;
+        sidebarContainer.style.width = `${sidebarWidth}px`;
+    }
 }
 
 // Adjust sidebar width initially and on window resize
