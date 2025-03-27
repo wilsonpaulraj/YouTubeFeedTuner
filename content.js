@@ -1,7 +1,6 @@
 console.log('Content script loaded');
 
 // Note-taking functionality
-// var videoNotes = {};
 
 async function saveNotes(notes) {
     const videoId = getCurrentVideoId();
@@ -109,32 +108,52 @@ function showToast(message) {
         toast = document.createElement('div');
         toast.id = 'yt-enhancer-toast';
         toast.style.cssText = `
-            position: fixed;
+            position: absolute;
             bottom: 20px;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translateX(-50%) translateY(100%);
             background-color: #3a86ff;
             color: white;
             padding: 12px 24px;
             border-radius: 8px;
-            z-index: 10001;
+            z-index: 30001;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            width: 90%;
+            max-width: 300px;
+            word-wrap: break-word;
+            pointer-events: none;
         `;
-        document.body.appendChild(toast);
+    }
+
+    // Find the sidebar container
+    const sidebarContainer = document.getElementById('sidebar-container');
+    if (!sidebarContainer) return;
+
+    // Append toast to sidebar if it's not already there
+    if (!toast.parentElement) {
+        sidebarContainer.appendChild(toast);
     }
 
     // Set message and show toast
     toast.textContent = message;
-    toast.style.opacity = '1';
 
-    // Hide toast after 3 seconds
+    // Force a reflow to ensure the animation plays
+    toast.offsetHeight;
+
+    // Show toast with animation
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+
+    // Hide toast after 4 seconds with animation
     setTimeout(() => {
         toast.style.opacity = '0';
-    }, 3000);
+        toast.style.transform = 'translateX(-50%) translateY(100%)';
+    }, 1000);
 }
 
 // Video chapters generation functionality
@@ -225,36 +244,28 @@ async function retrieveChapters() {
 
 // Sponsor detection and blocking functionality
 async function detectSponsors() {
-    // This is a simplified version. In a real implementation, you might:
-    // 1. Use a database of known sponsor segments
-    // 2. Use machine learning to detect sponsor segments
-    // 3. Use community-contributed data (like SponsorBlock API)
-
-    // For this demo, we'll use a simple approach with the LLM
-    const transcript = await getTranscript();
-    if (!transcript || transcript === "Transcript not available" || transcript === "Transcript not loaded") {
-        return [];
-    }
-
-    const prompt = `
-        You are an expert at detecting sponsor segments in YouTube videos. Based on the following transcript,
-        identify any sponsor segments or advertisements. Look for phrases like "this video is sponsored by",
-        "thanks to our sponsor", product promotions, etc.
-
-        For each sponsor segment you find, estimate the start and end times. Format your response as a JSON array
-        of objects, each with "start" (in seconds), "end" (in seconds), and "category" (e.g., "sponsor", "promo", "intro") properties.
-        Example: [{"start": 120, "end": 180, "category": "sponsor"}]
-
-        If you don't find any sponsor segments, return an empty array: []
-
-        Transcript:
-        ${transcript}
-    `;
-
     try {
-        // console.log('Detecting sponsors...');
+        const transcript = await getTranscript(false);
+        if (!transcript || transcript === "Transcript not available" || transcript === "Transcript not loaded" || transcript.trim() === "") {
+            return null;
+        }
+
+        const prompt = `
+            You are an expert at detecting sponsor segments in YouTube videos. Based on the following transcript,
+            identify any sponsor segments or advertisements. Look for phrases like "this video is sponsored by",
+            "thanks to our sponsor", product promotions, etc.
+
+            For each sponsor segment you find, estimate the start and end times. Format your response as a JSON array
+            of objects, each with "start" (in seconds), "end" (in seconds), and "category" (e.g., "sponsor", "promo", "intro") properties.
+            Example: [{"start": 120, "end": 180, "category": "sponsor"}]
+
+            If you don't find any sponsor segments, return an empty array: []
+
+            Transcript:
+            ${transcript}
+        `;
+
         const response = await getLLMResponse(prompt);
-        // console.log('Sponsors response:', response);
 
         // Parse the JSON response
         let sponsors;
@@ -268,13 +279,13 @@ async function detectSponsors() {
             }
         } catch (parseError) {
             console.error('Error parsing sponsors JSON:', parseError);
-            return [];
+            return null;
         }
 
         return sponsors;
     } catch (error) {
         console.error('Error detecting sponsors:', error);
-        return [];
+        return null;
     }
 }
 
@@ -380,34 +391,22 @@ async function waitForTranscriptButton(timeout = 10000) {
     throw new Error('Timeout: Transcript button not found');
 }
 
-async function getTranscript() {
+async function getTranscript(showToastOnError = true) {
     try {
-        // console.log('Attempting to get transcript');
-        // console.log('Waiting for transcript button...');
         const transcriptButton = await waitForTranscriptButton();
-
         if (!transcriptButton) {
-            // console.log('Transcript button not found');
             return 'Transcript not available';
         }
 
         transcriptButton.click();
-        // console.log('Clicked transcript button');
-
         await new Promise(resolve => setTimeout(resolve, 2000));
-        console.log('Waiting for 2 seconds');
 
         const transcriptContainer = document.querySelectorAll('ytd-transcript-segment-renderer');
         if (!transcriptContainer.length) {
-            // console.log('Transcript container not found');
-
-            // Attempt to close the transcript if opened but empty
             const closeButton = document.querySelector('button[aria-label="Close transcript"]');
             if (closeButton) {
                 closeButton.click();
-                console.log('Closed transcript');
             }
-
             return 'Transcript not loaded';
         }
 
@@ -415,40 +414,36 @@ async function getTranscript() {
         transcriptContainer.forEach(segment => {
             transcript += segment.innerText.split('\n').slice(1).join(' ') + ' ';
         });
-        // console.log('Transcript fetched:', transcript.trim());
 
-        // Close the transcript after fetching
         const closeButton = document.querySelector('button[aria-label="Close transcript"]');
         if (closeButton) {
             closeButton.click();
-            // console.log('Closed transcript');
-        } else {
-            // console.log('Close button not found');
         }
 
         return transcript.trim();
     } catch (error) {
-        console.error('Error fetching transcript:', error);
-        return 'Error fetching transcript';
+        if (showToastOnError) {
+            if (error.message.includes('Timeout')) {
+                showToast('Failed to load transcript. Please try again.');
+            } else {
+                showToast('Error loading transcript. Please refresh the page.');
+            }
+        }
+        return 'Transcript not available';
     }
 }
-
 
 async function getLLMResponse(prompt) {
     const API_KEY = 'AIzaSyB8Ha0uHwNqFfVoD9iAjCQbH4Yb9rbGSO8';
     const RATE_LIMIT_DELAY = 1000;
     let lastRequestTime = 0;
-
     const MAX_RETRIES = 3;
     let retries = 0;
 
     while (retries < MAX_RETRIES) {
         try {
-            console.log(`Attempt ${retries + 1} of ${MAX_RETRIES}`);
-
             if (retries > 0) {
                 const backoffDelay = RATE_LIMIT_DELAY * Math.pow(2, retries);
-                console.log(`Retry backoff: waiting ${backoffDelay}ms`);
                 await new Promise(resolve => setTimeout(resolve, backoffDelay));
             }
 
@@ -456,15 +451,12 @@ async function getLLMResponse(prompt) {
             const timeSinceLastRequest = now - lastRequestTime;
             if (timeSinceLastRequest < RATE_LIMIT_DELAY) {
                 const waitTime = RATE_LIMIT_DELAY - timeSinceLastRequest;
-                console.log(`Rate limit: waiting ${waitTime}ms`);
                 await new Promise(resolve => setTimeout(resolve, waitTime));
             }
             lastRequestTime = Date.now();
 
-            // console.log('Making API request...', {
-            //     timestamp: new Date().toISOString(),
-            //     prompt: prompt.substring(0, 50) + '...'
-            // });
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${API_KEY}`, {
                 method: 'POST',
@@ -477,29 +469,88 @@ async function getLLMResponse(prompt) {
                             text: prompt
                         }]
                     }]
-                })
-
+                }),
+                signal: controller.signal
             });
+
+            clearTimeout(timeoutId);
 
             if (!response.ok) {
                 throw new Error(`API request failed with status ${response.status}`);
             }
 
             const data = await response.json();
-            // console.log('API response received:', data);
+            const generatedText = data.candidates[0].content.parts[0].text;
 
-            const generatedCode = data.candidates[0].content.parts[0].text;
-            // console.log("Generated Code:\n", generatedCode);
-            return generatedCode;
+            // For summary requests, we don't need to validate JSON
+            if (prompt.includes('summarizer')) {
+                return generatedText;
+            }
+
+            // For other requests (chapters, sponsors), validate JSON
+            try {
+                // Try to find JSON in the response
+                const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
+                if (jsonMatch) {
+                    const jsonStr = jsonMatch[0];
+                    // Clean up the JSON string
+                    const cleanedJson = jsonStr
+                        .replace(/\n/g, ' ')
+                        .replace(/\r/g, '')
+                        .replace(/\t/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                    // Validate JSON
+                    JSON.parse(cleanedJson);
+                    return cleanedJson;
+                } else {
+                    // If no array found, try to parse the entire response
+                    const cleanedJson = generatedText
+                        .replace(/\n/g, ' ')
+                        .replace(/\r/g, '')
+                        .replace(/\t/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                    JSON.parse(cleanedJson);
+                    return cleanedJson;
+                }
+            } catch (parseError) {
+                // If JSON parsing fails, try to extract just the array part
+                const arrayMatch = generatedText.match(/\[[\s\S]*\]/);
+                if (arrayMatch) {
+                    try {
+                        const cleanedJson = arrayMatch[0]
+                            .replace(/\n/g, ' ')
+                            .replace(/\r/g, '')
+                            .replace(/\t/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+
+                        JSON.parse(cleanedJson);
+                        return cleanedJson;
+                    } catch (e) {
+                        throw new Error('Invalid JSON response from API');
+                    }
+                }
+                throw new Error('Invalid JSON response from API');
+            }
 
         } catch (error) {
-            console.error('Error in API request:', {
-                error: error.message,
-                retry: retries + 1,
-                maxRetries: MAX_RETRIES
-            });
+            if (error.name === 'AbortError') {
+                showToast('Request timed out. Please try again.');
+            } else if (error.message.includes('429')) {
+                retries++;
+                if (retries === MAX_RETRIES) {
+                    showToast('Too many requests. Please try again later.');
+                }
+            } else if (error.message.includes('Invalid JSON')) {
+                showToast('Received invalid response. Please try again.');
+            } else {
+                showToast('Failed to process request. Please try again.');
+            }
 
-            retries++;
             if (retries === MAX_RETRIES || !error.message.includes('429')) {
                 throw error;
             }
@@ -602,84 +653,115 @@ document.addEventListener('yt-navigate-finish', debounce(() => {
     addSidebarToggleButtonToNavbar();
 }, 200));
 
-
-
 function setupVideoNavigationWatcher() {
-    // Store the current video ID to detect changes
     let currentVideoId = getCurrentVideoId();
+    let watcherInterval;
 
-    // Function to check if video has changed
-    const checkVideoChange = () => {
-        const newVideoId = getCurrentVideoId();
+    const checkVideoChange = async () => {
+        try {
+            const newVideoId = getCurrentVideoId();
 
-        // If video ID changed (including from null to a value)
-        if (newVideoId !== currentVideoId) {
-            console.log('Video changed from', currentVideoId, 'to', newVideoId);
-            currentVideoId = newVideoId;
+            if (newVideoId !== currentVideoId) {
+                currentVideoId = newVideoId;
+                const sidebar = document.getElementById('sidebar-container');
 
-            // Update sidebar if it exists
-            const sidebar = document.getElementById('sidebar-container');
-            if (sidebar) {
-                // Reset all views
-                resetSummaryView();
-                resetNotesView();
-                resetChaptersView();
-                resetSponsorsView();
+                if (sidebar) {
+                    try {
+                        // Reset all views
+                        resetSummaryView();
+                        resetNotesView();
+                        resetChaptersView();
+                        resetSponsorsView();
 
-                // If we navigated to a valid video, load stored data
-                if (newVideoId) {
-                    // Load stored summary
-                    retrieveSummary().then(existingSummary => {
-                        if (existingSummary) {
-                            const summaryElement = document.getElementById('summary');
-                            if (summaryElement) {
-                                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
-                                updateTags(existingSummary.readingTime);
-                                console.log('Loaded stored summary for new video');
-                            }
+                        // If we navigated to a valid video, load stored data
+                        if (newVideoId) {
+                            await Promise.all([
+                                loadStoredSummary(),
+                                loadStoredNotes(),
+                                loadStoredChapters(),
+                                loadStoredSponsors()
+                            ]);
                         }
-                    });
-
-                    // Load stored notes
-                    retrieveNotes().then(notes => {
-                        if (notes) {
-                            const notesArea = document.getElementById('notes-area');
-                            if (notesArea) {
-                                notesArea.value = notes;
-                            }
-                        }
-                    });
-
-                    // Load stored chapters
-                    retrieveChapters().then(chapters => {
-                        if (chapters) {
-                            displayChapters(chapters);
-                        }
-                    });
-
-                    // Load stored sponsors
-                    retrieveSponsors().then(sponsors => {
-                        if (sponsors) {
-                            displaySponsors(sponsors);
-                            setupAutoSkipSponsors(sponsors);
-                        }
-                    });
+                    } catch (error) {
+                        showToast('Failed to update sidebar content. Please refresh the page.');
+                    }
                 }
             }
+        } catch (error) {
+            showToast('Error checking video changes. Please refresh the page.');
         }
     };
 
     // Check on YouTube navigation events
     document.addEventListener('yt-navigate-finish', () => {
-        setTimeout(checkVideoChange, 500); // Slight delay to ensure URL is updated
+        setTimeout(checkVideoChange, 500);
     });
 
-    // Also set up a regular polling as a fallback (some navigations might not trigger events)
-    setInterval(checkVideoChange, 2000);
+    // Set up polling with error handling
+    watcherInterval = setInterval(checkVideoChange, 2000);
+
+    // Clean up interval when the page is unloaded
+    window.addEventListener('unload', () => {
+        if (watcherInterval) {
+            clearInterval(watcherInterval);
+        }
+    });
+}
+
+// Helper functions for loading stored data
+async function loadStoredSummary() {
+    try {
+        const existingSummary = await retrieveSummary();
+        if (existingSummary) {
+            const summaryElement = document.getElementById('summary');
+            if (summaryElement) {
+                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
+                updateTags(existingSummary.readingTime);
+            }
+        }
+    } catch (error) {
+        showToast('Failed to load saved summary.');
+    }
+}
+
+async function loadStoredNotes() {
+    try {
+        const notes = await retrieveNotes();
+        if (notes) {
+            const notesArea = document.getElementById('notes-area');
+            if (notesArea) {
+                notesArea.value = notes;
+            }
+        }
+    } catch (error) {
+        showToast('Failed to load saved notes.');
+    }
+}
+
+async function loadStoredChapters() {
+    try {
+        const chapters = await retrieveChapters();
+        if (chapters) {
+            displayChapters(chapters);
+        }
+    } catch (error) {
+        showToast('Failed to load saved chapters.');
+    }
+}
+
+async function loadStoredSponsors() {
+    try {
+        const sponsors = await retrieveSponsors();
+        if (sponsors) {
+            displaySponsors(sponsors);
+            setupAutoSkipSponsors(sponsors);
+        }
+    } catch (error) {
+        showToast('Failed to load saved sponsor segments.');
+    }
 }
 
 // Fetch and inject sidebar with animation
-
 async function fetchAndInjectSidebarWithAnimation() {
     try {
         // Check if sidebar already exists
@@ -690,11 +772,18 @@ async function fetchAndInjectSidebarWithAnimation() {
 
         // Ensure the extension context is still valid
         if (!chrome.runtime?.getURL) {
-            throw new Error('Extension context invalidated.');
+            throw new Error('Extension context invalidated. Please reload the extension.');
         }
 
-        // Fetch sidebar HTML
-        const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'));
+        // Fetch sidebar HTML with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
+        const response = await fetch(chrome.runtime.getURL('ui/sidebar.html'), {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
             throw new Error(`Failed to fetch sidebar.html: ${response.status}`);
         }
@@ -707,47 +796,62 @@ async function fetchAndInjectSidebarWithAnimation() {
         document.body.appendChild(sidebar);
         adjustSidebarWidth();
 
-        // Add sidebar stylesheet
-        if (!document.getElementById('sidebar-styles')) {
-            const link = document.createElement('link');
-            link.id = 'sidebar-styles';
-            link.rel = 'stylesheet';
-            link.href = chrome.runtime.getURL('ui/sidebar.css');
-            document.head.appendChild(link);
+        // Add sidebar stylesheet with error handling
+        try {
+            if (!document.getElementById('sidebar-styles')) {
+                const link = document.createElement('link');
+                link.id = 'sidebar-styles';
+                link.rel = 'stylesheet';
+                link.href = chrome.runtime.getURL('ui/sidebar.css');
+                document.head.appendChild(link);
+            }
+        } catch (error) {
+            showToast('Failed to load sidebar styles. Some features may not work correctly.');
         }
 
-        // Event listeners
-        const closeButton = document.getElementById('close-sidebar');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                closeSidebarWithAnimation();
-            });
+        // Event listeners with error handling
+        try {
+            const closeButton = document.getElementById('close-sidebar');
+            if (closeButton) {
+                closeButton.addEventListener('click', () => {
+                    closeSidebarWithAnimation();
+                });
+            }
+
+            const refreshButton = document.getElementById('refresh-button');
+            if (refreshButton) {
+                refreshButton.addEventListener('click', () => {
+                    resetSummaryView();
+                    resetNotesView();
+                    resetChaptersView();
+                    resetSponsorsView();
+                    clearSummary();
+                });
+            }
+        } catch (error) {
+            showToast('Failed to set up sidebar controls. Please reload the page.');
         }
 
-        const refreshButton = document.getElementById('refresh-button');
-        if (refreshButton) {
-            refreshButton.addEventListener('click', () => {
-                resetSummaryView();
-                resetNotesView();
-                resetChaptersView();
-                resetSponsorsView();
-                clearSummary();
-            });
+        // Initialize all views with error handling
+        try {
+            resetSummaryView();
+            resetNotesView();
+            resetChaptersView();
+            resetSponsorsView();
+            setupTabNavigation();
+            setupVideoNavigationWatcher();
+        } catch (error) {
+            showToast('Failed to initialize sidebar features. Please reload the page.');
         }
-
-        // Initialize all views
-        resetSummaryView();
-        resetNotesView();
-        resetChaptersView();
-        resetSponsorsView();
-        // Set up tab navigation
-        setupTabNavigation();
-
-        // Set up the video navigation watcher to auto-update the sidebar
-        setupVideoNavigationWatcher();
 
     } catch (error) {
-        console.error('Failed to load sidebar:', error);
+        if (error.name === 'AbortError') {
+            showToast('Loading sidebar timed out. Please try again.');
+        } else if (error.message.includes('Extension context invalidated')) {
+            showToast('Extension needs to be reloaded. Please refresh the page.');
+        } else {
+            showToast('Failed to load sidebar. Please try again.');
+        }
     }
 }
 
@@ -803,8 +907,6 @@ function adjustSidebarWidth() {
 // Adjust sidebar width initially and on window resize
 window.addEventListener('resize', adjustSidebarWidth);
 window.addEventListener('load', adjustSidebarWidth);
-
-
 
 // Update existing function to use the new animation version
 function fetchAndInjectSidebar() {
@@ -925,44 +1027,39 @@ async function fetchAndDisplaySummary() {
         if (existingSummary) {
             document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
             updateTags(existingSummary.readingTime);
-            console.log('Retrieved summary from storage');
             return;
         }
 
         const transcript = await getTranscript();
-        if (transcript && transcript !== "NO_TRANSCRIPT") {
+        if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
             const summary = await getSummary(transcript);
             const readingTime = calculateReadingTime(summary);
-
-            storeSummary(summary, readingTime); // Persist to local storage
-
+            storeSummary(summary, readingTime);
             document.getElementById('summary').innerHTML = parseMarkdown(summary);
             updateTags(readingTime);
         } else {
-            // Show user-friendly message when no transcript is found
             document.getElementById('summary').innerHTML = `
-                <div class="no-transcript-message">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <div class="no-transcript-message" style="text-align: center;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
                         <circle cx="12" cy="12" r="10"></circle>
                         <line x1="12" y1="8" x2="12" y2="12"></line>
                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
                     </svg>
-                    <p>Unable to generate summary because this video doesn't have a transcript.</p>
+                    <p>This video doesn't have a transcript available.</p>
                     <p class="secondary-text">Try videos with captions or subtitles enabled.</p>
                 </div>
             `;
         }
     } catch (error) {
-        console.error('Failed to fetch summary:', error);
         document.getElementById('summary').innerHTML = `
-            <div class="error-message">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <div class="no-transcript-message" style="text-align: center;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
                     <circle cx="12" cy="12" r="10"></circle>
                     <line x1="12" y1="8" x2="12" y2="12"></line>
                     <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
-                <p>Something went wrong while generating the summary.</p>
-                <p class="secondary-text">Please try again later.</p>
+                <p>This video doesn't have a transcript available.</p>
+                <p class="secondary-text">Try videos with captions or subtitles enabled.</p>
             </div>
         `;
     }
@@ -1052,7 +1149,6 @@ function setupChaptersFeature() {
     const generateChaptersButton = document.getElementById('generate-chapters-button');
 
     generateChaptersButton.addEventListener('click', async () => {
-        // Show loading state
         document.getElementById('chapters-list').innerHTML = `
             <div class="loading-state">
                 <div class="spinner"></div>
@@ -1060,65 +1156,139 @@ function setupChaptersFeature() {
             </div>
         `;
 
-        // Check for existing chapters
         const existingChapters = await retrieveChapters();
         if (existingChapters) {
             displayChapters(existingChapters);
             return;
         }
 
-        // Get transcript and generate chapters
-        const transcript = await getTranscript();
-        if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
-            const chapters = await generateChapters(transcript);
-            if (chapters && chapters.length > 0) {
-                storeChapters(chapters);
-                displayChapters(chapters);
+        try {
+            const transcript = await getTranscript();
+            if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
+                const chapters = await generateChapters(transcript);
+                if (chapters && chapters.length > 0) {
+                    storeChapters(chapters);
+                    displayChapters(chapters);
+                } else {
+                    document.getElementById('chapters-list').innerHTML = `
+                        <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                            <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                        </div>
+                    `;
+                }
             } else {
-                document.getElementById('chapters-list').innerHTML = '<p class="info-text">Could not generate chapters for this video.</p>';
+                document.getElementById('chapters-list').innerHTML = `
+                    <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                        <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                    </div>
+                `;
             }
-        } else {
-            document.getElementById('chapters-list').innerHTML = '<p class="info-text">No transcript found or loaded.</p>';
+        } catch (error) {
+            document.getElementById('chapters-list').innerHTML = `
+                <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                    <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                </div>
+            `;
         }
     });
 }
 
 function setupSponsorsFeature() {
-    // Check for existing sponsors
+    const sponsorsList = document.getElementById('sponsors-list');
+    if (!sponsorsList) {
+        console.error('Sponsors list element not found');
+        return;
+    }
+
+    // Check for existing sponsors in storage
     retrieveSponsors().then(sponsors => {
         if (sponsors) {
             displaySponsors(sponsors);
             setupAutoSkipSponsors(sponsors);
         } else {
-            // Detect sponsors
-            document.getElementById('sponsors-list').innerHTML = `
+            // Show loading state
+            sponsorsList.innerHTML = `
                 <div class="loading-state">
                     <div class="spinner"></div>
                     <p>Detecting sponsor segments...</p>
                 </div>
             `;
 
+            // Automatically detect sponsors
             detectSponsors().then(sponsors => {
+                if (!sponsorsList) return;
+
+                if (sponsors === null) {
+                    sponsorsList.innerHTML = `
+                        <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                            </svg>
+                            <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                            <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 if (sponsors && sponsors.length > 0) {
                     storeSponsors(sponsors);
                     displaySponsors(sponsors);
                     setupAutoSkipSponsors(sponsors);
                 } else {
-                    document.getElementById('sponsors-list').innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
+                    sponsorsList.innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
                 }
+            }).catch(error => {
+                if (!sponsorsList) return;
+                sponsorsList.innerHTML = `
+                    <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                        <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                    </div>
+                `;
             });
         }
+    }).catch(error => {
+        if (!sponsorsList) return;
+        sponsorsList.innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
     });
 
     // Set up auto-skip toggle
     const sponsorBlockerToggle = document.getElementById('sponsor-blocker-toggle');
-    chrome.storage.local.get('autoSkipSponsors', (data) => {
-        sponsorBlockerToggle.checked = data.autoSkipSponsors || false;
-    });
+    if (sponsorBlockerToggle) {
+        chrome.storage.local.get('autoSkipSponsors', (data) => {
+            sponsorBlockerToggle.checked = data.autoSkipSponsors || false;
+        });
 
-    sponsorBlockerToggle.addEventListener('change', () => {
-        chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
-    });
+        sponsorBlockerToggle.addEventListener('change', () => {
+            chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
+        });
+    }
 }
 
 function resetNotesView() {
@@ -1236,7 +1406,6 @@ function resetSponsorsView() {
     if (!sponsorsList || !sponsorsContainer) return;
 
     if (!isWatchingVideo()) {
-        // User is not watching a video - show disabled state
         sponsorsContainer.innerHTML = `
             <div class="sponsors-container">
                 <div class="sponsors-header">
@@ -1255,7 +1424,6 @@ function resetSponsorsView() {
             </div>
         `;
     } else {
-        // User is watching a video - show active state
         sponsorsContainer.innerHTML = `
             <div class="sponsors-container">
                 <div class="sponsors-header">
@@ -1269,14 +1437,65 @@ function resetSponsorsView() {
                     </div>
                 </div>
                 <div id="sponsors-list" class="sponsors-list">
-                    <div class="loading-sponsors">
-                        <p class="info-text">Detecting sponsor segments...</p>
+                    <div class="loading-state">
+                        <div class="spinner"></div>
+                        <p>Detecting sponsor segments...</p>
                     </div>
                 </div>
             </div>
         `;
 
-        // Re-add event listeners and check for existing sponsors
-        setupSponsorsFeature();
+        const sponsorBlockerToggle = document.getElementById('sponsor-blocker-toggle');
+        if (sponsorBlockerToggle) {
+            chrome.storage.local.get('autoSkipSponsors', (data) => {
+                sponsorBlockerToggle.checked = data.autoSkipSponsors || false;
+            });
+
+            sponsorBlockerToggle.addEventListener('change', () => {
+                chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
+            });
+        }
+
+        detectSponsors().then(sponsors => {
+            const sponsorsList = document.getElementById('sponsors-list');
+            if (!sponsorsList) return;
+
+            if (sponsors === null) {
+                sponsorsList.innerHTML = `
+                    <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                        <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            if (sponsors && sponsors.length > 0) {
+                storeSponsors(sponsors);
+                displaySponsors(sponsors);
+                setupAutoSkipSponsors(sponsors);
+            } else {
+                sponsorsList.innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
+            }
+        }).catch(error => {
+            const sponsorsList = document.getElementById('sponsors-list');
+            if (!sponsorsList) return;
+            sponsorsList.innerHTML = `
+                <div class="no-transcript-message" style="text-align: center; padding: 20px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin: 0 auto;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <p style="font-size: 16px; margin: 10px 0;">This video doesn't have a transcript available.</p>
+                    <p class="secondary-text" style="font-size: 14px; color: #666;">Try videos with captions or subtitles enabled.</p>
+                </div>
+            `;
+        });
     }
 }
