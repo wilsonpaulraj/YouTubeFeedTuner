@@ -1,7 +1,7 @@
 console.log('Content script loaded');
 
 // Note-taking functionality
-var videoNotes = {};
+// var videoNotes = {};
 
 async function saveNotes(notes) {
     const videoId = getCurrentVideoId();
@@ -620,10 +620,15 @@ function setupVideoNavigationWatcher() {
             // Update sidebar if it exists
             const sidebar = document.getElementById('sidebar-container');
             if (sidebar) {
+                // Reset all views
                 resetSummaryView();
+                resetNotesView();
+                resetChaptersView();
+                resetSponsorsView();
 
-                // If we navigated to a valid video, also check for stored summary
+                // If we navigated to a valid video, load stored data
                 if (newVideoId) {
+                    // Load stored summary
                     retrieveSummary().then(existingSummary => {
                         if (existingSummary) {
                             const summaryElement = document.getElementById('summary');
@@ -632,6 +637,31 @@ function setupVideoNavigationWatcher() {
                                 updateTags(existingSummary.readingTime);
                                 console.log('Loaded stored summary for new video');
                             }
+                        }
+                    });
+
+                    // Load stored notes
+                    retrieveNotes().then(notes => {
+                        if (notes) {
+                            const notesArea = document.getElementById('notes-area');
+                            if (notesArea) {
+                                notesArea.value = notes;
+                            }
+                        }
+                    });
+
+                    // Load stored chapters
+                    retrieveChapters().then(chapters => {
+                        if (chapters) {
+                            displayChapters(chapters);
+                        }
+                    });
+
+                    // Load stored sponsors
+                    retrieveSponsors().then(sponsors => {
+                        if (sponsors) {
+                            displaySponsors(sponsors);
+                            setupAutoSkipSponsors(sponsors);
                         }
                     });
                 }
@@ -647,38 +677,6 @@ function setupVideoNavigationWatcher() {
     // Also set up a regular polling as a fallback (some navigations might not trigger events)
     setInterval(checkVideoChange, 2000);
 }
-
-// Add a hover trigger zone to the right side of the screen
-// function addHoverTriggerZone() {
-//     // Remove any existing trigger zone
-//     const existingTrigger = document.getElementById('sidebar-hover-trigger');
-//     if (existingTrigger) {
-//         existingTrigger.remove();
-//     }
-
-//     // Create a new trigger zone
-//     const triggerZone = document.createElement('div');
-//     triggerZone.id = 'sidebar-hover-trigger';
-//     triggerZone.style.cssText = `
-//         position: fixed;
-//         top: 0;
-//         right: 0;
-//         width: 20px;
-//         height: 100%;
-//         z-index: 9000;
-//         opacity: 0;
-//     `;
-
-//     // Add hover event listeners
-//     triggerZone.addEventListener('mouseenter', () => {
-//         console.log('Hover detected on trigger zone');
-//         fetchAndInjectSidebarWithAnimation();
-//     });
-
-//     document.body.appendChild(triggerZone);
-//     console.log('Hover trigger zone added');
-// }
-
 
 // Fetch and inject sidebar with animation
 
@@ -730,45 +728,20 @@ async function fetchAndInjectSidebarWithAnimation() {
         if (refreshButton) {
             refreshButton.addEventListener('click', () => {
                 resetSummaryView();
+                resetNotesView();
+                resetChaptersView();
+                resetSponsorsView();
                 clearSummary();
             });
         }
 
-        // Create a close trigger zone outside the sidebar
-        // const closeTrigger = document.createElement('div');
-        // closeTrigger.id = 'sidebar-close-trigger';
-        // closeTrigger.style.cssText = `
-        //     position: fixed;
-        //     top: 0;
-        //     left: 0;
-        //     width: calc(100% - 350px);
-        //     height: 100%;
-        //     z-index: 8999;
-        //     opacity: 0;
-        // `;
-        // closeTrigger.addEventListener('click', () => {
-        //     closeSidebarWithAnimation();
-        // });
-        // document.body.appendChild(closeTrigger);
-
-        setupGenerateSummaryButton();
+        // Initialize all views
+        resetSummaryView();
+        resetNotesView();
+        resetChaptersView();
+        resetSponsorsView();
+        // Set up tab navigation
         setupTabNavigation();
-        setupNotesFeature();
-        setupChaptersFeature();
-        setupSponsorsFeature();
-
-        // Load stored summary for the current video
-        const existingSummary = await retrieveSummary();
-        if (existingSummary) {
-            const summaryElement = document.getElementById('summary');
-            if (summaryElement) {
-                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
-            }
-            updateTags(existingSummary.readingTime);
-            console.log('Loaded stored summary for current video');
-        } else {
-            resetSummaryView();
-        }
 
         // Set up the video navigation watcher to auto-update the sidebar
         setupVideoNavigationWatcher();
@@ -790,9 +763,6 @@ function closeSidebarWithAnimation() {
     sidebar.addEventListener('animationend', () => {
         sidebar.remove();
 
-        // Also remove the close trigger
-        // const closeTrigger = document.getElementById('sidebar-close-trigger');
-        // if (closeTrigger) closeTrigger.remove();
     }, { once: true }); // Ensures the event listener is removed after firing once
 }
 
@@ -801,14 +771,22 @@ function adjustSidebarWidth() {
 
     const secondary = document.querySelector('#secondary.style-scope.ytd-watch-flexy');
     const sidebarContainer = document.getElementById('sidebar-container');
-    if (!secondary) {
-        console.warn('Secondary container not found.');
+    if (!sidebarContainer) return;
+    if (!isWatchingVideo) {
+        sidebarContainer.style.width = '450px'; // Default width
+        sidebarContainer.style.right = '0';
         return;
     }
 
     // Get the starting position of the secondary container (from the left)
     const secondaryRect = secondary.getBoundingClientRect();
     const sidebarStart = secondaryRect.left;
+
+    if (sidebarStart <= 0) {
+        sidebarContainer.style.width = '450px'; // Default width
+        sidebarContainer.style.right = '0';
+        return;
+    }
 
     // Calculate the width from the secondary container to the right edge of the viewport
     const sidebarWidth = window.innerWidth - sidebarStart;
@@ -849,10 +827,6 @@ if (!window.observerInitialized) {
             addSidebarToggleButtonToNavbar();
         }
 
-        // // Add the hover trigger if it doesn't exist
-        // if (!document.getElementById('sidebar-hover-trigger')) {
-        //     addHoverTriggerZone();
-        // }
     }, 300));
 
     // Observe the necessary part of the DOM
@@ -881,11 +855,6 @@ document.addEventListener('yt-navigate-finish', debounce(() => {
         addSidebarToggleButtonToNavbar();
     }
 
-    // Add hover trigger if needed
-    // if (!document.getElementById('sidebar-hover-trigger')) {
-    //     console.log('Adding hover trigger after navigation');
-    //     addHoverTriggerZone();
-    // }
 }, 300));
 
 function isWatchingVideo() {
@@ -951,8 +920,6 @@ async function fetchAndDisplaySummary() {
             `;
             return;
         }
-
-        const videoId = getCurrentVideoId();
 
         const existingSummary = await retrieveSummary();
         if (existingSummary) {
@@ -1152,4 +1119,164 @@ function setupSponsorsFeature() {
     sponsorBlockerToggle.addEventListener('change', () => {
         chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
     });
+}
+
+function resetNotesView() {
+    const notesArea = document.getElementById('notes-area');
+    const notesContainer = document.getElementById('notes-tab');
+    if (!notesArea || !notesContainer) return;
+
+    if (!isWatchingVideo()) {
+        // User is not watching a video - show disabled state
+        notesContainer.innerHTML = `
+            <div class="notes-container">
+                <div class="notes-header">
+                    <h3>Video Notes</h3>
+                    <div class="notes-actions">
+                        <button id="save-notes-button" class="action-button disabled" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Save
+                        </button>
+                        <button id="export-notes-button" class="action-button disabled" disabled>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export
+                        </button>
+                    </div>
+                </div>
+                <textarea id="notes-area" placeholder="You have to open a video to take notes" disabled></textarea>
+                <div class="timestamp-actions">
+                    <button id="add-timestamp-button" class="action-button disabled" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="16"></line>
+                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                        </svg>
+                        Add Timestamp
+                    </button>
+                </div>
+            </div>
+        `;
+    } else {
+        // User is watching a video - show active state
+        notesArea.disabled = false;
+        notesArea.placeholder = "Take notes about this video here...";
+
+        // Load saved notes for the current video
+        retrieveNotes().then(notes => {
+            if (notes) {
+                notesArea.value = notes;
+            }
+        });
+
+        // Re-add event listeners
+        setupNotesFeature();
+    }
+}
+
+function resetChaptersView() {
+    const chaptersList = document.getElementById('chapters-list');
+    const chaptersContainer = document.getElementById('chapters-tab');
+    if (!chaptersList || !chaptersContainer) return;
+
+    if (!isWatchingVideo()) {
+        // User is not watching a video - show disabled state
+        chaptersContainer.innerHTML = `
+            <div class="chapters-container">
+                <div class="chapters-header">
+                    <h3>Video Chapters</h3>
+                    <button id="generate-chapters-button" class="generate-button disabled" disabled>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Generate Chapters
+                    </button>
+                </div>
+                <div id="chapters-list" class="chapters-list">
+                    <p class="info-text">You have to open a video to generate chapters</p>
+                </div>
+            </div>
+        `;
+    } else {
+        // User is watching a video - show active state
+        chaptersContainer.innerHTML = `
+            <div class="chapters-container">
+                <div class="chapters-header">
+                    <h3>Video Chapters</h3>
+                    <button id="generate-chapters-button" class="generate-button">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                        Generate Chapters
+                    </button>
+                </div>
+                <div id="chapters-list" class="chapters-list">
+                    <p class="info-text">Click the button above to analyze the video and generate AI chapters.</p>
+                </div>
+            </div>
+        `;
+
+        // Re-add event listeners
+        setupChaptersFeature();
+    }
+}
+
+function resetSponsorsView() {
+    const sponsorsList = document.getElementById('sponsors-list');
+    const sponsorsContainer = document.getElementById('sponsors-tab');
+    if (!sponsorsList || !sponsorsContainer) return;
+
+    if (!isWatchingVideo()) {
+        // User is not watching a video - show disabled state
+        sponsorsContainer.innerHTML = `
+            <div class="sponsors-container">
+                <div class="sponsors-header">
+                    <h3>Sponsor Segments</h3>
+                    <div class="sponsor-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="sponsor-blocker-toggle" disabled>
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Auto-Skip Sponsors</span>
+                    </div>
+                </div>
+                <div id="sponsors-list" class="sponsors-list">
+                    <p class="info-text">You have to open a video to detect sponsor segments</p>
+                </div>
+            </div>
+        `;
+    } else {
+        // User is watching a video - show active state
+        sponsorsContainer.innerHTML = `
+            <div class="sponsors-container">
+                <div class="sponsors-header">
+                    <h3>Sponsor Segments</h3>
+                    <div class="sponsor-toggle">
+                        <label class="switch">
+                            <input type="checkbox" id="sponsor-blocker-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span>Auto-Skip Sponsors</span>
+                    </div>
+                </div>
+                <div id="sponsors-list" class="sponsors-list">
+                    <div class="loading-sponsors">
+                        <p class="info-text">Detecting sponsor segments...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Re-add event listeners and check for existing sponsors
+        setupSponsorsFeature();
+    }
 }
