@@ -441,8 +441,6 @@
 
 #notes-area:focus {
   outline: none;
-  border-color: var(--accent-color);
-  /* box-shadow: 0 0 0 2px rgba(58, 134, 255, 0.2); */
 }
 
 #notes-area::placeholder {
@@ -941,4 +939,72 @@ input:checked + .slider:before {
   height: 8px;
   background-color: #3a86ff;
   border-radius: 50%;
+}
+
+/* Timestamp Button Styles */
+.timestamp-actions {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    z-index: 10;
+}
+
+#add-timestamp-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-accent);
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+#add-timestamp-button:hover {
+    background: var(--bg-accent);
+    border-color: var(--border-color);
+    transform: translateY(-1px);
+}
+
+#add-timestamp-button:active {
+    transform: translateY(0);
+}
+
+#add-timestamp-button svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.2s ease;
+}
+
+#add-timestamp-button:hover svg {
+    transform: scale(1.1);
+}
+
+#add-timestamp-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+#add-timestamp-button:hover::before {
+    transform: translateX(100%);
 }

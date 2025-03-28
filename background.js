@@ -9,21 +9,6 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab && tab.url && tab.url.startsWith('chrome://extensions')) {
-        return;
-    }
-    else if (!tab || !tab.url || typeof tab.url !== 'string') {
-        return;
-    }
-    else if (changeInfo.status === 'complete' && tab.url.indexOf('youtube.com') !== -1) {
-        chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            files: ['content.js']
-        });
-    }
-});
-
 // Handle messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'download_notes') {
