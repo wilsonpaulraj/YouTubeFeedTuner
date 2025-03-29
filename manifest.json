@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Video Enhancer",
+  "name": "YouTube Enhancer",
   "version": "1.0",
   "description": "Get AI-generated summaries, notes, chapters, and sponsor detection for YouTube videos.",
   "permissions": ["storage", "scripting", "activeTab", "downloads"],
@@ -24,7 +24,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["ui/sidebar.html", "ui/sidebar.css"],
+      "resources": ["ui/sidebar.html", "ui/sidebar.css", "content.js"],
       "matches": ["https://www.youtube.com/*"]
     }
   ]

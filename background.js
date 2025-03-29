@@ -1,6 +1,4 @@
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('YouTube Enhancer extension installed!');
-
     // Initialize default settings
     chrome.storage.local.get('autoSkipSponsors', (data) => {
         if (data.autoSkipSponsors === undefined) {
@@ -9,17 +7,28 @@ chrome.runtime.onInstalled.addListener(() => {
     });
 });
 
+// Ensure content script is injected only when YouTube loads completely
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (tab && tab.url && tab.url.startsWith('chrome://extensions')) {
-        return;
-    }
-    else if (!tab || !tab.url || typeof tab.url !== 'string') {
-        return;
-    }
-    else if (changeInfo.status === 'complete' && tab.url.indexOf('youtube.com') !== -1) {
+    if (!tab || !tab.url || typeof tab.url !== 'string') return;
+
+    // Ignore Chrome internal pages
+    if (tab.url.startsWith('chrome://') || tab.url.startsWith('about:')) return;
+
+    // Inject only when a YouTube page finishes loading
+    if (changeInfo.status === 'complete' && tab.url.includes('youtube.com')) {
         chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            files: ['content.js']
+            target: { tabId },
+            func: () => {
+                // Ensure script is injected only once per page
+                if (!window.scriptInjected) {
+                    window.scriptInjected = true;
+                    const script = document.createElement('script');
+                    script.src = chrome.runtime.getURL('content.js');
+                    document.documentElement.appendChild(script);
+                }
+            }
+        }).catch((error) => {
+            console.warn("Content script injection failed:", error);
         });
     }
 });

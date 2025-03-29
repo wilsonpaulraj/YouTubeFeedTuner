@@ -1,13 +1,12 @@
-console.log('Content script loaded');
+
 
 // Note-taking functionality
-
 async function saveNotes(notes) {
     const videoId = getCurrentVideoId();
     await chrome.storage.local.set({
         [`notes_${videoId}`]: notes
     });
-    console.log('Saved notes for video:', videoId);
+    /* console.log('Saved notes for video:', videoId); */
 }
 
 async function retrieveNotes() {
@@ -23,7 +22,7 @@ function setupNotesFeature() {
     const exportNotesButton = document.getElementById('export-notes-button');
 
     if (!notesArea || !saveNotesButton || !addTimestampButton || !exportNotesButton) {
-        console.error('One or more notes elements not found');
+        /* console.error('One or more notes elements not found'); */
         return;
     }
 
@@ -176,9 +175,9 @@ async function generateChapters(transcript) {
     `;
 
     try {
-        console.log('Generating chapters...');
+        /* console.log('Generating chapters...'); */
         const response = await getLLMResponse(prompt);
-        console.log('Chapters response:', response);
+        /* console.log('Chapters response:', response); */
 
         // Clean up the response to ensure it's valid JSON
         let cleanedResponse = response
@@ -218,11 +217,11 @@ async function generateChapters(transcript) {
 
             return chapters;
         } catch (parseError) {
-            console.error('Error parsing chapters JSON:', parseError);
+            /* console.error('Error parsing chapters JSON:', parseError); */
             return [];
         }
     } catch (error) {
-        console.error('Error generating chapters:', error);
+        /* console.error('Error generating chapters:', error); */
         return [];
     }
 }
@@ -265,7 +264,7 @@ async function storeChapters(chapters) {
     await chrome.storage.local.set({
         [`chapters_${videoId}`]: chapters
     });
-    console.log('Stored chapters for video:', videoId);
+    /* console.log('Stored chapters for video:', videoId); */
 }
 
 async function retrieveChapters() {
@@ -284,7 +283,7 @@ async function detectSponsors(transcript) {
         // Get video duration
         const video = document.querySelector('video');
         if (!video) {
-            console.error('Video element not found');
+            /* console.error('Video element not found'); */
             return null;
         }
         const videoDuration = video.duration;
@@ -405,7 +404,7 @@ async function detectSponsors(transcript) {
 
         return null;
     } catch (error) {
-        console.error('Error detecting sponsors:', error);
+        // console.error('Error detecting sponsors:', error);
         return null;
     }
 }
@@ -454,7 +453,7 @@ async function storeSponsors(sponsors) {
     await chrome.storage.local.set({
         [`sponsors_${videoId}`]: sponsors
     });
-    console.log('Stored sponsors for video:', videoId);
+    // console.log('Stored sponsors for video:', videoId);
 }
 
 async function retrieveSponsors() {
@@ -510,7 +509,7 @@ async function waitForTranscriptButton(timeout = 5000) {
         const buttons = Array.from(document.querySelectorAll('button'));
         const transcriptButton = buttons.find(btn => btn.textContent.includes('Show transcript'));
         if (transcriptButton) {
-            console.log('Transcript button found!');
+            // console.log('Transcript button found!');
             return transcriptButton;
         }
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -635,7 +634,7 @@ const transcriptModule = (() => {
 async function getTranscript(showToastOnError = true) {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available');
+        // console.error('No video ID available');
         return 'Transcript not available';
     }
 
@@ -649,7 +648,7 @@ async function getTranscript(showToastOnError = true) {
         }
         return transcript;
     } catch (error) {
-        console.error('Error getting transcript:', error);
+        // console.error('Error getting transcript:', error);
         if (showToastOnError) {
             showToast('Error loading transcript. Please refresh the page.');
         }
@@ -793,92 +792,153 @@ function parseMarkdown(markdown) {
 async function getSummary(transcript) {
     if (!transcript || transcript === 'Transcript not available' || transcript === 'Transcript not loaded') {
         console.error('Invalid transcript provided to getSummary');
+
         return 'Error: No valid transcript available';
     }
 
     const prompt = `
         You are an expert summarizer of YouTube transcripts. Provide a concise and informative summary of the *content* of the following transcript. Focus on the key information, arguments, and topics discussed. Avoid phrases like "This video explains..." or "The speaker discusses...". Instead, directly present the information as if you were explaining it to someone.
+        If this video appears to be an educational video, provide a summary of the main points and arguments made by the speaker. If it appears to be a vlog or entertainment video, summarize the main events and highlights.
+        In case of educational, programming, or technical content, provide a summary of the main concepts, code snippets, or techniques discussed.
 
         Transcript:
         ${transcript}
         `;
 
     try {
-        console.log('Attempting to get summary');
+        // console.log('Attempting to get summary');
         const response = await getLLMResponse(prompt);
-        console.log('Summary fetched successfully');
+        // console.log('Summary fetched successfully');
         return response;
     } catch (error) {
-        console.error('Error fetching summary:', error);
+        // console.error('Error fetching summary:', error);
         return 'Error fetching summary';
     }
 }
 
-function addSidebarToggleButtonToNavbar() {
-    const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
-    const existingButton = document.getElementById('sidebar-toggle-icon');
-
-    // Ensure the container exists and the button is not already there
-    if (!buttonsContainer || existingButton) {
+(function () {
+    if (window.sidebarScriptInjected) {
+        console.warn("Sidebar script already injected. Skipping.");
         return;
     }
+    window.sidebarScriptInjected = true;
 
-    const sidebarToggleButton = document.createElement('div');
-    sidebarToggleButton.id = 'sidebar-toggle-icon';
-    sidebarToggleButton.innerHTML = `
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 5h16M4 12h10M4 19h7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path d="M19 15l-4 4l-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-    `;
-    sidebarToggleButton.style.cssText = `
-    width: 24px;
-    height: 24px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #FF0000; /* Bright red */
-    transition: filter 0.3s ease; /* Use filter for icon glow */
-    filter: drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000); /* Initial glow */
-`;
+    function addSidebarToggleButtonToNavbar() {
+        const buttonsContainer = document.querySelector('#buttons.style-scope.ytd-masthead');
+        const existingButton = document.getElementById('sidebar-toggle-icon');
 
-    sidebarToggleButton.addEventListener('mouseenter', () => {
-        sidebarToggleButton.style.filter = 'drop-shadow(0 0 8px #FF4500) drop-shadow(0 0 15px #FF4500)'; // Stronger glow on hover
-        sidebarToggleButton.style.color = '#FF4500'; // Slightly lighter red on hover
-    });
+        if (!buttonsContainer || existingButton) {
+            return;
+        }
 
-    sidebarToggleButton.addEventListener('mouseleave', () => {
-        sidebarToggleButton.style.filter = 'drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000)'; // Original glow
-        sidebarToggleButton.style.color = '#FF0000';
-    });
+        const sidebarToggleButton = document.createElement('div');
+        sidebarToggleButton.id = 'sidebar-toggle-icon';
 
-    sidebarToggleButton.addEventListener('click', () => {
-        fetchAndInjectSidebar();
-        adjustSidebarWidth();
-    });
+        // Creating SVG manually (CSP-safe)
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("width", "24");
+        svg.setAttribute("height", "24");
+        svg.setAttribute("viewBox", "0 0 24 24");
+        svg.setAttribute("fill", "none");
 
-    buttonsContainer.appendChild(sidebarToggleButton);
-    console.log('Floating icon added');
-}
+        const path1 = document.createElementNS(svgNS, "path");
+        path1.setAttribute("d", "M4 5h16M4 12h10M4 19h7");
+        path1.setAttribute("stroke", "currentColor");
+        path1.setAttribute("stroke-width", "2");
+        path1.setAttribute("stroke-linecap", "round");
 
-// Debounce function to avoid multiple rapid calls
-function debounce(func, delay) {
-    let timeout;
-    return function (...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-}
+        const path2 = document.createElementNS(svgNS, "path");
+        path2.setAttribute("d", "M19 15l-4 4l-2-2");
+        path2.setAttribute("stroke", "currentColor");
+        path2.setAttribute("stroke-width", "2");
+        path2.setAttribute("stroke-linecap", "round");
+        path2.setAttribute("stroke-linejoin", "round");
 
-// Initial injection
-addSidebarToggleButtonToNavbar();
+        svg.appendChild(path1);
+        svg.appendChild(path2);
+        sidebarToggleButton.appendChild(svg);
 
-// Re-add icon after soft navigations
-document.addEventListener('yt-navigate-finish', debounce(() => {
-    console.log('Page navigation detected, adding sidebar toggle icon...');
-    addSidebarToggleButtonToNavbar();
-}, 200));
+        Object.assign(sidebarToggleButton.style, {
+            width: "24px",
+            height: "24px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#FF0000",
+            transition: "filter 0.3s ease",
+            filter: "drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000)"
+        });
+
+        sidebarToggleButton.addEventListener('mouseenter', () => {
+            sidebarToggleButton.style.filter = 'drop-shadow(0 0 8px #FF4500) drop-shadow(0 0 15px #FF4500)';
+            sidebarToggleButton.style.color = '#FF4500';
+        });
+
+        sidebarToggleButton.addEventListener('mouseleave', () => {
+            sidebarToggleButton.style.filter = 'drop-shadow(0 0 5px #FF0000) drop-shadow(0 0 10px #FF0000)';
+            sidebarToggleButton.style.color = '#FF0000';
+        });
+
+        sidebarToggleButton.addEventListener('click', () => {
+            if (typeof fetchAndInjectSidebar === 'function') {
+                fetchAndInjectSidebar();
+            } else {
+                console.warn("⚠️ fetchAndInjectSidebar function not found!");
+            }
+
+            if (typeof adjustSidebarWidth === 'function') {
+                adjustSidebarWidth();
+            } else {
+                console.warn("⚠️ adjustSidebarWidth function not found!");
+            }
+        });
+
+        buttonsContainer.appendChild(sidebarToggleButton);
+        console.log('✅ Sidebar button added');
+    }
+
+    function debounce(func, delay) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), delay);
+        };
+    }
+
+    function observeDOMChanges() {
+        if (window.observerInitialized) return;
+
+        const observer = new MutationObserver(debounce(() => {
+            if (!document.getElementById('sidebar-toggle-icon')) {
+                addSidebarToggleButtonToNavbar();
+            }
+        }, 300));
+
+        const targetNode = document.querySelector('ytd-app') || document.body;
+        if (targetNode) {
+            observer.observe(targetNode, { childList: true, subtree: true });
+            window.observerInitialized = true;
+            console.log('✅ Observer initialized');
+        }
+    }
+
+    function initSidebarButton() {
+        setTimeout(() => {
+            addSidebarToggleButtonToNavbar();
+            observeDOMChanges();
+        }, 1000);
+    }
+
+    document.addEventListener('yt-navigate-finish', debounce(() => {
+        console.log('🔄 Page navigation detected');
+        addSidebarToggleButtonToNavbar();
+    }, 300));
+
+    initSidebarButton();
+})();
+
 
 function setupVideoNavigationWatcher() {
     let currentVideoId = getCurrentVideoId();
@@ -940,7 +1000,7 @@ async function loadStoredSummary() {
     try {
         const videoId = getCurrentVideoId();
         if (!videoId) {
-            console.error('No video ID available to load summary');
+            // console.error('No video ID available to load summary');
             return;
         }
 
@@ -948,7 +1008,7 @@ async function loadStoredSummary() {
         if (existingSummary) {
             const summaryElement = document.getElementById('summary');
             if (summaryElement) {
-                console.log('Loading stored summary for video:', videoId);
+                // console.log('Loading stored summary for video:', videoId);
                 summaryElement.innerHTML = parseMarkdown(existingSummary.text);
                 updateTags(existingSummary.readingTime);
                 setupCopySummaryButton();
@@ -973,7 +1033,7 @@ async function loadStoredSummary() {
             }
         }
     } catch (error) {
-        console.error('Error loading stored summary:', error);
+        // console.error('Error loading stored summary:', error);
         showToast('Failed to load saved summary.');
     }
 }
@@ -1160,7 +1220,7 @@ function closeSidebarWithAnimation() {
 }
 
 function adjustSidebarWidth() {
-    console.log('Adjusting sidebar width...');
+    // console.log('Adjusting sidebar width...');
 
     const secondary = document.querySelector('#secondary.style-scope.ytd-watch-flexy');
     const sidebarContainer = document.getElementById('sidebar-container');
@@ -1184,8 +1244,8 @@ function adjustSidebarWidth() {
     // Calculate the width from the secondary container to the right edge of the viewport
     const sidebarWidth = window.innerWidth - sidebarStart;
 
-    console.log('Secondary container starts at:', sidebarStart);
-    console.log('Calculated sidebar width:', sidebarWidth);
+    // console.log('Secondary container starts at:', sidebarStart);
+    // console.log('Calculated sidebar width:', sidebarWidth);
 
     // Set sidebar position and width
     sidebarContainer.style.top = '0';
@@ -1210,43 +1270,7 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Modify the existing observer code to also add the hover trigger
-if (!window.observerInitialized) {
-    const observer = new MutationObserver(debounce(() => {
-        // Add the sidebar button if it doesn't exist
-        if (!document.getElementById('sidebar-toggle-icon')) {
-            addSidebarToggleButtonToNavbar();
-        }
 
-    }, 300));
-
-    // Observe the necessary part of the DOM
-    const targetNode = document.querySelector('ytd-app') || document.body;
-    observer.observe(targetNode, {
-        childList: true,
-        subtree: true
-    });
-
-    window.observerInitialized = true;
-    console.log('Observer initialized with improved targeting');
-}
-// Initial setup
-setTimeout(() => {
-    addSidebarToggleButtonToNavbar();
-    // addHoverTriggerZone();
-}, 1000);
-
-// Add the navigation event listener to also ensure hover trigger exists
-document.addEventListener('yt-navigate-finish', debounce(() => {
-    console.log('Page navigation detected');
-
-    // Add sidebar button if needed
-    if (!document.getElementById('sidebar-toggle-icon')) {
-        console.log('Adding sidebar toggle icon after navigation');
-        addSidebarToggleButtonToNavbar();
-    }
-
-}, 300));
 
 function isWatchingVideo() {
     // Check if we're on a watch page with a video ID
@@ -1281,7 +1305,7 @@ function setupCopySummaryButton() {
                 showToast('Summary copied to clipboard!');
             }).catch(err => {
                 showToast('Failed to copy summary. Please try again.');
-                console.error('Failed to copy text: ', err);
+                // console.error('Failed to copy text: ', err);
             });
         });
     }
@@ -1339,7 +1363,7 @@ async function fetchAndDisplaySummary() {
 
         const videoId = getCurrentVideoId();
         if (!videoId) {
-            console.error('No video ID available');
+            // console.error('No video ID available');
             return;
         }
 
@@ -1349,7 +1373,7 @@ async function fetchAndDisplaySummary() {
         // First check for existing summary for this specific video
         const existingSummary = await retrieveSummary();
         if (existingSummary) {
-            console.log('Displaying existing summary for video:', videoId);
+            // console.log('Displaying existing summary for video:', videoId);
             document.getElementById('summary').innerHTML = parseMarkdown(existingSummary.text);
             updateTags(existingSummary.readingTime);
             setupCopySummaryButton();
@@ -1359,7 +1383,7 @@ async function fetchAndDisplaySummary() {
         // If no existing summary, get transcript and generate new summary
         const transcript = await getTranscript();
         if (transcript && transcript !== 'Transcript not available' && transcript !== 'Transcript not loaded') {
-            console.log('Generating new summary for video:', videoId);
+            // console.log('Generating new summary for video:', videoId);
             const summary = await getSummary(transcript);
             const readingTime = calculateReadingTime(summary);
 
@@ -1372,7 +1396,7 @@ async function fetchAndDisplaySummary() {
             showTranscriptError('summary');
         }
     } catch (error) {
-        console.error('Error in fetchAndDisplaySummary:', error);
+        // console.error('Error in fetchAndDisplaySummary:', error);
         showTranscriptError('summary');
     }
 }
@@ -1401,15 +1425,6 @@ function getLoadingState() {
         `;
 }
 
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        const sidebar = document.getElementById('sidebar-container');
-        if (sidebar) {
-            sidebar.remove();
-        }
-    }
-});
-
 // Get current video ID
 function getCurrentVideoId() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -1420,12 +1435,12 @@ function getCurrentVideoId() {
 async function storeSummary(summary, readingTime) {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available to store summary');
+        // console.error('No video ID available to store summary');
         return;
     }
     try {
         const storageKey = `summary_${videoId}`;
-        console.log('Storing summary for video:', videoId);
+        // console.log('Storing summary for video:', videoId);
         await chrome.storage.local.set({
             [storageKey]: {
                 text: summary,
@@ -1433,9 +1448,9 @@ async function storeSummary(summary, readingTime) {
                 timestamp: Date.now() // Add timestamp to track when summary was generated
             }
         });
-        console.log('Successfully stored summary for video:', videoId);
+        // console.log('Successfully stored summary for video:', videoId);
     } catch (error) {
-        console.error('Error storing summary:', error);
+        // console.error('Error storing summary:', error);
     }
 }
 
@@ -1443,7 +1458,7 @@ async function storeSummary(summary, readingTime) {
 async function retrieveSummary() {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available to retrieve summary');
+        // console.error('No video ID available to retrieve summary');
         return null;
     }
     try {
@@ -1452,14 +1467,14 @@ async function retrieveSummary() {
         const summary = data[storageKey];
 
         if (summary) {
-            console.log('Retrieved summary for video:', videoId);
+            // console.log('Retrieved summary for video:', videoId);
             return summary;
         } else {
-            console.log('No summary found for video:', videoId);
+            // console.log('No summary found for video:', videoId);
             return null;
         }
     } catch (error) {
-        console.error('Error retrieving summary:', error);
+        // console.error('Error retrieving summary:', error);
         return null;
     }
 }
@@ -1468,7 +1483,7 @@ async function retrieveSummary() {
 async function clearSummary() {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available to clear summary');
+        // console.error('No video ID available to clear summary');
         return;
     }
     try {
@@ -1476,9 +1491,9 @@ async function clearSummary() {
         await chrome.storage.local.remove(storageKey);
         // Clear transcript cache for this video
         transcriptModule.clearCache(videoId);
-        console.log('Cleared summary and transcript cache for video:', videoId);
+        // console.log('Cleared summary and transcript cache for video:', videoId);
     } catch (error) {
-        console.error('Error clearing summary:', error);
+        // console.error('Error clearing summary:', error);
     }
 }
 
@@ -1527,7 +1542,7 @@ function setupChaptersFeature() {
     const chaptersList = document.getElementById('chapters-list');
 
     if (!generateChaptersButton || !chaptersList) {
-        console.error('Chapters elements not found');
+        // console.error('Chapters elements not found');
         return;
     }
 
@@ -1572,7 +1587,7 @@ function setupChaptersFeature() {
 function setupSponsorsFeature() {
     const sponsorsList = document.getElementById('sponsors-list');
     if (!sponsorsList) {
-        console.error('Sponsors list element not found');
+        // console.error('Sponsors list element not found');
         return;
     }
 
@@ -1949,32 +1964,32 @@ function showTranscriptError(feature) {
 async function storeTranscript(transcript) {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available to store transcript');
+        // console.error('No video ID available to store transcript');
         return;
     }
     try {
         await chrome.storage.local.set({
             [`transcript_${videoId}`]: transcript
         });
-        console.log('Successfully stored transcript for video:', videoId);
+        // console.log('Successfully stored transcript for video:', videoId);
     } catch (error) {
-        console.error('Error storing transcript:', error);
+        // console.error('Error storing transcript:', error);
     }
 }
 
 async function retrieveTranscript() {
     const videoId = getCurrentVideoId();
     if (!videoId) {
-        console.error('No video ID available to retrieve transcript');
+        // console.error('No video ID available to retrieve transcript');
         return null;
     }
     try {
         const data = await chrome.storage.local.get(`transcript_${videoId}`);
         const transcript = data[`transcript_${videoId}`];
-        console.log('Retrieved transcript for video:', videoId, transcript ? 'found' : 'not found');
+        // console.log('Retrieved transcript for video:', videoId, transcript ? 'found' : 'not found');
         return transcript || null;
     } catch (error) {
-        console.error('Error retrieving transcript:', error);
+        // console.error('Error retrieving transcript:', error);
         return null;
     }
 }
