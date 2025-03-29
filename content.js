@@ -154,11 +154,11 @@ function showToast(message) {
     toast.style.opacity = '1';
     toast.style.transform = 'translateX(-50%) translateY(0)';
 
-    // Hide toast after 4 seconds with animation
+    // Hide toast after 2 seconds with animation
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translateX(-50%) translateY(100%)';
-    }, 1000);
+    }, 2000);
 }
 
 // Video chapters generation functionality
@@ -504,7 +504,7 @@ function setupAutoSkipSponsors(sponsors) {
     });
 }
 
-async function waitForTranscriptButton(timeout = 10000) {
+async function waitForTranscriptButton(timeout = 5000) {
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
         const buttons = Array.from(document.querySelectorAll('button'));
@@ -1472,6 +1472,7 @@ async function clearSummary() {
 function setupTabNavigation() {
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
+    const tabNavigation = document.querySelector('.tab-navigation');
 
     // Restore active tab from storage
     chrome.storage.local.get('activeTab', (data) => {
@@ -1483,6 +1484,7 @@ function setupTabNavigation() {
                 tabContents.forEach(content => content.classList.remove('active'));
                 activeButton.classList.add('active');
                 activeContent.classList.add('active');
+                tabNavigation.setAttribute('data-active', data.activeTab);
             }
         }
     });
@@ -1497,6 +1499,9 @@ function setupTabNavigation() {
             button.classList.add('active');
             const tabId = button.dataset.tab;
             document.getElementById(`${tabId}-tab`).classList.add('active');
+
+            // Update the underline position
+            tabNavigation.setAttribute('data-active', tabId);
 
             // Store the active tab
             chrome.storage.local.set({ activeTab: tabId });
