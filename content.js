@@ -1015,7 +1015,26 @@ async function loadStoredSponsors() {
     }
 }
 
-// Fetch and inject sidebar with animation
+function handleRefreshButtonClick() {
+    const refreshButton = document.getElementById('refresh-button');
+    if (!refreshButton) return;
+
+    // Add rotating class to trigger animation
+    refreshButton.classList.add('rotating');
+
+    // Remove the class after animation completes
+    setTimeout(() => {
+        refreshButton.classList.remove('rotating');
+    }, 500); // Match this with the animation duration in CSS
+
+    // Reset all views
+    resetSummaryView();
+    resetNotesView();
+    resetChaptersView();
+    resetSponsorsView();
+    clearSummary();
+}
+
 async function fetchAndInjectSidebarWithAnimation() {
     try {
         // Check if sidebar already exists
@@ -1074,13 +1093,7 @@ async function fetchAndInjectSidebarWithAnimation() {
 
             const refreshButton = document.getElementById('refresh-button');
             if (refreshButton) {
-                refreshButton.addEventListener('click', () => {
-                    resetSummaryView();
-                    resetNotesView();
-                    resetChaptersView();
-                    resetSponsorsView();
-                    clearSummary();
-                });
+                refreshButton.addEventListener('click', handleRefreshButtonClick);
             }
 
             // Set up all feature buttons
