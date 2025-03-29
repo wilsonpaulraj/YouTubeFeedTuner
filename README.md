@@ -25,21 +25,27 @@ YouTube Enhancer is an open-source browser extension designed to revolutionize y
 
 ## Installation
 
-Follow these steps to install YouTube Enhancer:
+### Step 1: Download the Extension
+Choose one of the following methods to download the extension:
 
-1. Clone the repository or download the source code:
+1. **Using Git (CLI method)**:
    ```bash
    git clone https://github.com/wilsonpaulraj/YouTubeFeedTuner.git
    ```
+2. **Download ZIP (No CLI required)**:
+   - Visit the [GitHub repository](https://github.com/wilsonpaulraj/YouTubeFeedTuner).
+   - Click on the **Code** button and select **Download ZIP**.
+   - Extract the downloaded ZIP file.
 
-2. Open your browser’s extensions page:
-   - **Chrome**: `chrome://extensions/`
-   - **Firefox**: `about:debugging#/runtime/this-firefox`
+### Step 2: Install the Extension in Your Browser
 
-3. Enable "Developer mode" (Chrome) or "Enable add-on debugging" (Firefox).
+1. Open your browser’s extensions page:
+   - **Chrome**: Go to `chrome://extensions/`
+   - **Firefox**: Go to `about:debugging#/runtime/this-firefox`
 
-4. Click **Load unpacked** (Chrome) or **Load Temporary Add-on** (Firefox) and select the downloaded project folder.
-
+2. Enable **Developer mode** (Chrome) or **Enable add-on debugging** (Firefox).
+3. Click **Load unpacked** (Chrome) or **Load Temporary Add-on** (Firefox).
+4. Select the downloaded/cloned project folder.
 5. The extension is now installed and ready to use!
 
 ## Usage
