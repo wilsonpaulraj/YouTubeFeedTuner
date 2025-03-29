@@ -24,11 +24,6 @@ YouTube Enhancer is an open-source browser extension designed to revolutionize y
 - Identify and skip sponsored sections within videos.
 - Save time by avoiding unnecessary ad content.
 
-### 📃 Enhanced Transcript Management
-- Fetch and store video transcripts.
-- Utilize transcripts for note-taking and chapter generation.
-- Improve video accessibility and comprehension.
-
 ## Installation
 
 Follow these steps to install YouTube Enhancer:
