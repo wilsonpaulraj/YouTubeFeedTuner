@@ -28,11 +28,11 @@ YouTube Enhancer is an open-source browser extension designed to revolutionize y
 ### Step 1: Download the Extension
 Choose one of the following methods to download the extension:
 
-1. **Using Git (CLI method)**:
+1. **Using Git**:
    ```bash
    git clone https://github.com/wilsonpaulraj/YouTubeFeedTuner.git
    ```
-2. **Download ZIP (No CLI required)**:
+2. **Download ZIP**:
    - Visit the [GitHub repository](https://github.com/wilsonpaulraj/YouTubeFeedTuner).
    - Click on the **Code** button and select **Download ZIP**.
    - Extract the downloaded ZIP file.
@@ -50,7 +50,7 @@ Choose one of the following methods to download the extension:
 
 ## Usage
 
-Once installed, you can access YouTube Enhancer from your browser’s toolbar. The sidebar interface provides quick access to the following features:
+Once installed and enabled, you can access YouTube Enhancer Sidebar by clicking the icon on the right-most end of the youtube's navbar. The sidebar interface provides quick access to the following features:
 
 - **Smart Summarization**: Instantly generate AI-powered video summaries with a single click.
 - **Notes**: Take, save, and export notes with timestamps.
