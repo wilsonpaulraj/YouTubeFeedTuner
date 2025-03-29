@@ -69,7 +69,7 @@ YouTube Enhancer is licensed under the MIT License. See the [LICENSE](LICENSE) f
 ## Contact & Support
 
 For questions, suggestions, or support, reach out to:
-- **Kanish Yatra Raj** - [kanishyatraraj@gmail.com]
+- **Kanish Yatra Raj** - [Kanish.aims@gmail.com]
 - **Wilsonpaulraj** - [wilsonpaulrajd@gmail.com]
 
 ---
