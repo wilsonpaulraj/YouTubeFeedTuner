@@ -14,7 +14,6 @@ YouTube Enhancer is an open-source browser extension designed to revolutionize y
 - Take and save notes for any video.
 - Add timestamps for easy reference.
 - Export notes as text files for future use.
-- Import and manage shared notes from other users.
 
 ### ⏳ Automated Chapters
 - Automatically generate chapters based on the video's transcript.
