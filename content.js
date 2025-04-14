@@ -1502,20 +1502,19 @@ function setupTabNavigation() {
     const tabContents = document.querySelectorAll('.tab-content');
     const tabNavigation = document.querySelector('.tab-navigation');
 
-    // Restore active tab from storage
-    chrome.storage.local.get('activeTab', (data) => {
-        if (data.activeTab) {
-            const activeButton = document.querySelector(`.tab-button[data-tab="${data.activeTab}"]`);
-            const activeContent = document.getElementById(`${data.activeTab}-tab`);
-            if (activeButton && activeContent) {
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
-                activeButton.classList.add('active');
-                activeContent.classList.add('active');
-                tabNavigation.setAttribute('data-active', data.activeTab);
-            }
+    // Restore active tab from sessionStorage
+    const savedTab = sessionStorage.getItem('activeTab');
+    if (savedTab) {
+        const activeButton = document.querySelector(`.tab-button[data-tab="${savedTab}"]`);
+        const activeContent = document.getElementById(`${savedTab}-tab`);
+        if (activeButton && activeContent) {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            activeButton.classList.add('active');
+            activeContent.classList.add('active');
+            tabNavigation.setAttribute('data-active', savedTab);
         }
-    });
+    }
 
     tabButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -1531,11 +1530,12 @@ function setupTabNavigation() {
             // Update the underline position
             tabNavigation.setAttribute('data-active', tabId);
 
-            // Store the active tab
-            chrome.storage.local.set({ activeTab: tabId });
+            // Store the active tab in sessionStorage
+            sessionStorage.setItem('activeTab', tabId);
         });
     });
 }
+
 
 function setupChaptersFeature() {
     const generateChaptersButton = document.getElementById('generate-chapters-button');

@@ -1,3 +1,4 @@
+
 <div id="yt-summary-sidebar" class="dark-theme" >
   <div class="sidebar-header">
     <div class="header-left">
@@ -20,6 +21,7 @@
 
   <div class="tab-navigation">
     <button class="tab-button active" data-tab="summary">Summary</button>
+    <button class="tab-button" data-tab="doubt">Doubt</button>
     <button class="tab-button" data-tab="notes">Notes</button>
     <button class="tab-button" data-tab="chapters">Chapters</button>
     <button class="tab-button" data-tab="sponsors">Sponsors</button>
@@ -52,6 +54,53 @@
               Generate Summary
             </button>
             <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Doubt Tab -->
+    <div class="tab-content" id="doubt-tab">
+      <div class="doubt-container">
+        <div class="doubt-header">
+          <h3>Ask Questions</h3>
+          <button id="add-doubt-timestamp" class="action-button">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            Add Current Timestamp
+          </button>
+        </div>
+
+        <div class="doubt-form">
+          <div class="timestamp-display">
+            <span id="current-timestamp">Timestamp: Not selected</span>
+            <button id="jump-to-timestamp" class="small-action-button" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </button>
+          </div>
+
+          <textarea id="doubt-input" placeholder="What's your question about this part of the video?"></textarea>
+
+          <div class="doubt-actions">
+            <button id="submit-doubt" class="submit-button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+              Ask Question
+            </button>
+          </div>
+        </div>
+
+        <div class="doubt-list">
+          <h4>Previous Questions</h4>
+          <div id="doubt-history" class="doubt-history">
+            <p class="info-text">Your questions will appear here. Add a timestamp and ask a question to get started.</p>
           </div>
         </div>
       </div>
@@ -134,5 +183,5 @@
         </div>
       </div>
     </div>
-  </div>
+ </div>
 </div>
