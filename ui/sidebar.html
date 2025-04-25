@@ -63,44 +63,71 @@
     <div class="tab-content" id="doubt-tab">
       <div class="doubt-container">
         <div class="doubt-header">
-          <h3>Ask Questions</h3>
-          <button id="add-doubt-timestamp" class="action-button">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="16"></line>
-              <line x1="8" y1="12" x2="16" y2="12"></line>
-            </svg>
-            Add Current Timestamp
-          </button>
+          <h3>Questions</h3>
         </div>
 
-        <div class="doubt-form">
-          <div class="timestamp-display">
-            <span id="current-timestamp">Timestamp: Not selected</span>
-            <button id="jump-to-timestamp" class="small-action-button" disabled>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-            </button>
+        <div class="doubt-content">
+          <!-- Question Input Section -->
+          <div class="doubt-input-section">
+            <textarea id="doubt-input" placeholder="Ask a question about this part of the video..."></textarea>
+
+            <div class="doubt-input-actions">
+              <div class="timestamp-row">
+                <div class="timestamp-display">
+                  <span id="current-timestamp">Timestamp: Not selected</span>
+                </div>
+                <button id="add-doubt-timestamp" class="timestamp-button" aria-label="Set timestamp">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
+                  </svg>
+                </button>
+                <button id="jump-to-timestamp" class="timestamp-button" disabled aria-label="Jump to timestamp">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                  </svg>
+                </button>
+              </div>
+              <button id="submit-doubt" class="submit-button">
+                Ask Question
+              </button>
+            </div>
           </div>
 
-          <textarea id="doubt-input" placeholder="What's your question about this part of the video?"></textarea>
-
-          <div class="doubt-actions">
-            <button id="submit-doubt" class="submit-button">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="22" y1="2" x2="11" y2="13"></line>
-                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-              </svg>
-              Ask Question
-            </button>
+          <!-- Current Answer Section -->
+          <div id="current-answer-section" class="doubt-answer-section">
+            <div id="current-answer-container" class="current-answer-container hidden">
+              <div class="current-question-display" id="current-question"></div>
+              <div class="current-answer-display" id="current-answer"></div>
+              <button id="fullscreen-button" class="small-action-button" aria-label="Fullscreen view">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+                </svg>
+              </button>
+            </div>
+            <div id="empty-answer-state" class="empty-answer-state">
+              <div class="empty-answer-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+              </div>
+              <h4>Ask Your First Question</h4>
+              <p>Get AI answers based on the video transcript</p>
+              <ul class="question-tips">
+                <li>Add timestamp for context</li>
+                <li>Ask about video concepts</li>
+                <li>Be specific for best results</li>
+              </ul>
+            </div>
           </div>
-        </div>
 
-        <div class="doubt-list">
-          <h4>Previous Questions</h4>
-          <div id="doubt-history" class="doubt-history">
-            <p class="info-text">Your questions will appear here. Add a timestamp and ask a question to get started.</p>
+          <!-- Previous Questions Section -->
+          <div class="doubt-history-section">
+            <div class="history-section-header">Previous Questions</div>
+            <div id="doubt-history" class="doubt-history-list">
+              <p class="info-text">Your questions will appear here.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -184,4 +211,16 @@
       </div>
     </div>
  </div>
+</div>
+
+<!-- Fullscreen Answer Overlay -->
+<div id="fullscreen-answer-overlay" class="fullscreen-answer-overlay">
+  <div class="fullscreen-answer-header">
+    <div class="fullscreen-answer-title">Answer Details</div>
+    <button id="fullscreen-close" class="fullscreen-close-button">×</button>
+  </div>
+  <div class="fullscreen-content">
+    <div id="fullscreen-question" class="fullscreen-question"></div>
+    <div id="fullscreen-answer" class="fullscreen-answer"></div>
+  </div>
 </div>

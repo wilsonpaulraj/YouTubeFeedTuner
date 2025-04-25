@@ -16,15 +16,37 @@
     }
   },
   "content_scripts": [
-    {
-      "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    }
-  ],
+  {
+    "matches": ["*://*.youtube.com/*"],
+    "js": [
+      "features/utils.js",
+      "features/llm.js",
+      "features/transcript.js",
+      "features/summary.js",
+      "features/doubt.js",
+      "features/sponsors.js",
+      "features/chapters.js",
+      "features/notes.js",
+      "features/content.js"
+    ],
+    "css": ["ui/sidebar.css"]
+  }
+],
   "web_accessible_resources": [
     {
-      "resources": ["ui/sidebar.html", "ui/sidebar.css", "content.js"],
+      "resources": [
+        "ui/sidebar.html",
+        "ui/sidebar.css",
+        "features/utils.js",
+        "features/llm.js",
+        "features/transcript.js",
+        "features/summary.js",
+        "features/doubt.js",
+        "features/sponsors.js",
+        "features/chapters.js",
+        "features/notes.js",
+        "features/content.js"
+      ],
       "matches": ["https://www.youtube.com/*"]
     }
   ]

@@ -6,6 +6,7 @@
   --text-primary: #ffffff;
   --text-secondary: #a0a0a0;
   --accent-color: #3a86ff;
+  --accent-color-rgb: 58, 134, 255;
   --accent-secondary: #2563eb;
   --success-color: #22c55e;
   --border-color: #333333;
@@ -389,7 +390,7 @@
 }
 
 #add-timestamp-button:hover svg {
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 #add-timestamp-button::before {
@@ -583,337 +584,450 @@ input:checked + .slider:before {
 
 /* ========== ENHANCED DOUBT TAB ========== */
 .doubt-container {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 20px;
-  height: calc(100% - 40px);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  height: 100%;
+  position: relative;
 }
 
 .doubt-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
+  justify-content: flex-start;
+  padding: 8px 0 6px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--border-color);
   position: relative;
 }
 
 .doubt-header h3 {
+  font-size: 16px;
+  font-weight: 500;
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  color: var(--text-primary);
   position: relative;
-}
-
-.doubt-header h3::after {
-  content: '';
-  position: absolute;
-  bottom: -13px;
-  left: 0;
-  width: 40px;
-  height: 3px;
-  background-color: var(--accent-color);
-  border-radius: 3px;
-}
-
-.doubt-form {
-  padding: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  margin-bottom: 20px;
-  background-color: rgba(255, 255, 255, 0.03);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.timestamp-display {
   display: flex;
   align-items: center;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background-color: var(--bg-primary);
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-  transition: border-color 0.2s ease;
 }
 
-.timestamp-display:hover {
-  border-color: var(--accent-color);
+.doubt-header h3::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 16px;
+  background-color: var(--accent-color);
+  margin-right: 8px;
+  border-radius: 2px;
 }
 
-#current-timestamp {
-  flex-grow: 1;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  font-family: monospace;
-  letter-spacing: 0.5px;
-}
-
-#doubt-input {
-  width: calc(100% - 32px);
-  height: 100px;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 14px;
-  margin-bottom: 16px;
-  resize: vertical;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.6;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-}
-
-#doubt-input:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
-}
-
-#doubt-input::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.7;
-}
-
-.doubt-actions {
+/* Main content container for doubt tab */
+.doubt-content {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow: hidden;
 }
 
-.submit-button {
+/* Input section */
+.doubt-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+}
+
+.doubt-input-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.timestamp-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 1;
+}
+
+.timestamp-display {
+  padding: 6px 12px;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  font-size: 13px;
+  flex-grow: 1;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  height: 32px;
+  box-sizing: border-box;
+}
+
+/* Add a pulse animation for timestamp feedback */
+.timestamp-pulse {
+  animation: pulse-highlight 1s ease-in-out;
+}
+
+@keyframes pulse-highlight {
+  0% { color: var(--accent-color); }
+  50% { color: var(--accent-secondary); }
+  100% { color: var(--accent-color); }
+}
+
+.timestamp-button {
+  background-color: var(--bg-accent);
+  color: var(--text-primary);
+  border: none;
+  padding: 0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  overflow: hidden;
+  outline: none;
+}
+
+.timestamp-button:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.timestamp-button:hover {
+  background-color: var(--accent-color);
+  box-shadow: none;
+}
+
+.timestamp-button svg {
+  transition: color 0.2s ease;
+  flex-shrink: 0;
+  stroke-width: 1.5px;
+  fill: none;
+}
+
+.timestamp-button:hover svg {
+  stroke: white;
+}
+
+.timestamp-button:active {
+  background-color: var(--accent-secondary);
+}
+
+.timestamp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--bg-accent);
+  box-shadow: none;
+}
+
+#doubt-input {
+  width: 100%;
+  height: 70px;
+  resize: none;
+  padding: 10px;
+  background-color: var(--bg-primary);
+  border: none;
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+#doubt-input:focus {
+  outline: 1px solid var(--accent-color);
+}
+
+.submit-button {
+  padding: 0 16px;
+  height: 32px;
   background-color: var(--accent-color);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 12px 18px;
+  border-radius: 4px;
   font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 120px;
 }
 
 .submit-button:hover {
   background-color: var(--accent-secondary);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.submit-button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.submit-button svg {
-  transition: transform 0.2s ease;
-}
-
-.submit-button:hover svg {
-  transform: translateX(2px);
-}
-
-/* Modified doubt-list to be a fixed height container */
-.doubt-list {
+/* Answer section */
+.doubt-answer-section {
   display: flex;
   flex-direction: column;
-  margin-top: auto; /* Push to bottom if space allows */
-  flex: 1; /* Take remaining space in the container */
-  min-height: 200px; /* Minimum height for the list section */
+  background-color: var(--bg-secondary);
+  border-radius: 4px;
+  padding: 10px;
+  flex: 0 0 auto;
+  height: 180px;
+  max-height: 180px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  transition: all 0.3s ease;
+  opacity: 1;
+  transform: translateY(0);
 }
 
-.doubt-list h4 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--text-primary);
+.doubt-answer-section.hidden {
+  height: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+}
+
+.current-answer-container {
+  position: relative;
+  z-index: 20;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.current-answer-container.hidden {
+  display: none;
+}
+
+#fullscreen-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.6;
+  background-color: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  z-index: 25;
+  border: none;
+  color: white;
   display: flex;
   align-items: center;
-  gap: 8px;
-  position: sticky;
-  top: 0;
-  background-color: var(--bg-secondary);
-  padding: 8px 0;
-  z-index: 5;
+  justify-content: center;
+  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
 }
 
-.doubt-list h4::before {
-  content: '';
-  display: block;
+#fullscreen-button:hover {
+  opacity: 1;
+  background-color: rgba(0, 0, 0, 0.7);
+  transform: scale(1.05);
+}
+
+#fullscreen-button:active {
+  transform: scale(0.95);
+}
+
+/* Ensure the question doesn't cover the button */
+.current-question-display {
+  font-size: 13px;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  padding-left: 6px;
+  padding-right: 36px;
+  border-left: 2px solid var(--accent-color);
+  white-space: normal;
+  overflow: visible;
+  word-wrap: break-word;
+}
+
+.current-answer-display {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+/* Custom scrollbar for answer display */
+.current-answer-display::-webkit-scrollbar {
   width: 4px;
-  height: 16px;
+}
+
+.current-answer-display::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.current-answer-display::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
+/* Previous questions section */
+.doubt-history-section {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0; /* Important for proper flexbox behavior */
+  border-top: 1px solid var(--border-color);
+  padding-top: 12px;
+  margin-top: 12px;
+}
+
+/* Improved header */
+.history-section-header {
+  position: relative;
+  padding-left: 12px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.history-section-header::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 14px;
   background-color: var(--accent-color);
   border-radius: 2px;
+  opacity: 0.8;
 }
 
-/* Make the doubt history independently scrollable */
-.doubt-history {
+.doubt-history-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
   overflow-y: auto;
-  padding-right: 8px;
-  max-height: calc(100% - 40px); /* Subtract header height */
+  flex: 1;
+  padding-right: 4px;
+}
+
+.doubt-content {
+  display: flex;
+  flex-direction: column;
   height: 100%;
-  margin-bottom: 8px;
+  overflow: hidden;
 }
 
-.doubt-item {
-  background-color: var(--bg-primary);
-  border-radius: 10px;
-  padding: 18px;
-  border-left: 3px solid var(--accent-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.doubt-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.doubt-item-header {
+/* Improved history item layout */
+.doubt-history-item {
   display: flex;
-  justify-content: space-between;
+  flex-direction: row;
   align-items: center;
-  margin-bottom: 14px;
-}
-
-.doubt-timestamp {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--accent-color);
-  font-size: 0.9rem;
-  cursor: pointer;
-  font-family: monospace;
-  padding: 4px 8px;
-  background-color: rgba(var(--accent-color-rgb), 0.1);
+  padding: 8px 10px;
   border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.doubt-timestamp:hover {
-  background-color: rgba(var(--accent-color-rgb), 0.2);
-}
-
-.doubt-question {
-  color: var(--text-primary);
-  margin-bottom: 14px;
-  font-size: 14px;
-  line-height: 1.6;
-  padding-left: 8px;
-  border-left: 2px solid var(--border-color);
-}
-
-.doubt-answer {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  border-top: 1px solid var(--border-color);
-  padding-top: 14px;
-  line-height: 1.6;
-  margin-top: 4px;
-}
-
-.doubt-controls {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.doubt-control-button {
-  background: none;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
-  font-size: 0.85rem;
+  margin-bottom: 6px;
+  background-color: var(--bg-secondary);
   cursor: pointer;
-  padding: 7px 12px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  transition: background-color 0.2s ease, border-left 0.2s ease;
+  min-height: 40px;
 }
 
-.doubt-control-button:hover {
+.doubt-history-item:hover {
   background-color: var(--bg-accent);
-  color: var(--text-primary);
-  border-color: var(--accent-color);
 }
 
-.small-action-button {
+.doubt-history-item.active {
+  border-left: 2px solid var(--accent-color);
+  padding-left: 8px;
+}
+
+.history-item-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0; /* Important for flex child text truncation */
+}
+
+.history-timestamp {
+  font-size: 11px;
+  color: var(--accent-color);
+  opacity: 0.8;
+  white-space: nowrap;
+  margin-right: 8px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.history-question {
+  font-size: 13px;
+  color: var(--text-primary);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  /* Allow dynamic height */
+  line-clamp: unset;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: vertical;
+  flex: 1;
+  min-width: 0; /* Important for text truncation */
+  word-break: break-word;
+}
+
+.history-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.history-view-btn,
+.history-delete-btn {
   background: none;
   border: none;
-  color: var(--text-secondary);
   cursor: pointer;
-  padding: 8px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  color: var(--text-secondary);
 }
 
-.small-action-button:hover {
-  background-color: var(--bg-accent);
-  color: var(--text-primary);
+.history-view-btn {
+  color: var(--accent-color);
+  opacity: 0.7;
 }
 
-.small-action-button:disabled {
-  color: var(--border-color);
-  cursor: not-allowed;
-  opacity: 0.6;
+.history-view-btn:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.15);
+  opacity: 1;
 }
 
-/* Custom scrollbar for doubt history */
-.doubt-history::-webkit-scrollbar {
-  width: 6px;
+.history-delete-btn:hover {
+  background-color: rgba(255, 107, 107, 0.15);
+  color: #ff6b6b;
 }
 
-.doubt-history::-webkit-scrollbar-track {
-  background: var(--bg-secondary);
-  border-radius: 3px;
-}
-
-.doubt-history::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
-  border-radius: 3px;
-  transition: background-color 0.2s ease;
-}
-
-.doubt-history::-webkit-scrollbar-thumb:hover {
-  background-color: var(--text-secondary);
-}
-
-/* Add timestamp button styling */
-#add-doubt-timestamp {
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  background-color: rgba(var(--accent-color-rgb), 0.1);
-  border: 1px solid transparent;
-}
-
-#add-doubt-timestamp:hover {
-  background-color: rgba(var(--accent-color-rgb), 0.2);
-  border-color: var(--accent-color);
-}
-
-#add-doubt-timestamp svg {
-  transition: transform 0.2s ease;
-}
-
-#add-doubt-timestamp:hover svg {
-  transform: scale(1.1);
+.doubt-history-item:hover .history-view-btn,
+.doubt-history-item:hover .history-delete-btn {
+  opacity: 1;
 }
 
 /* ========== COMMON BUTTONS AND UI ELEMENTS ========== */
@@ -943,6 +1057,30 @@ input:checked + .slider:before {
 
 .action-button:hover svg {
   transform: scale(1.1);
+}
+
+.small-action-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.small-action-button:hover {
+  background-color: var(--bg-accent);
+  color: var(--text-primary);
+}
+
+.small-action-button:disabled {
+  color: var(--border-color);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .icon-button {
@@ -1072,29 +1210,77 @@ input:checked + .slider:before {
 }
 
 /* ========== SCROLLBAR STYLING ========== */
+#yt-summary-sidebar,
+.content,
+.tab-content,
+.summary-container,
+.summary-content,
+.notes-container,
+.chapters-container,
+.doubt-content,
+.doubt-history-list,
+.sponsors-container {
+  scrollbar-width: thin; /* Firefox */
+  -ms-overflow-style: thin; /* IE and Edge */
+}
+
 #yt-summary-sidebar::-webkit-scrollbar,
 .content::-webkit-scrollbar,
+.tab-content::-webkit-scrollbar,
 .summary-container::-webkit-scrollbar,
-.summary-content::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
+.summary-content::-webkit-scrollbar,
+.notes-container::-webkit-scrollbar,
+.chapters-container::-webkit-scrollbar,
+.doubt-content::-webkit-scrollbar,
+.doubt-history-list::-webkit-scrollbar,
+.sponsors-container::-webkit-scrollbar,
+.current-answer-display::-webkit-scrollbar {
+  width: 3px;
+  height: 3px;
 }
 
-.content::-webkit-scrollbar {
-  width: 5px;
+#yt-summary-sidebar::-webkit-scrollbar-track,
+.content::-webkit-scrollbar-track,
+.tab-content::-webkit-scrollbar-track,
+.summary-container::-webkit-scrollbar-track,
+.summary-content::-webkit-scrollbar-track,
+.notes-container::-webkit-scrollbar-track,
+.chapters-container::-webkit-scrollbar-track,
+.doubt-content::-webkit-scrollbar-track,
+.doubt-history-list::-webkit-scrollbar-track,
+.sponsors-container::-webkit-scrollbar-track,
+.current-answer-display::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-.content::-webkit-scrollbar-track {
-  background: var(--bg-primary);
+#yt-summary-sidebar::-webkit-scrollbar-thumb,
+.content::-webkit-scrollbar-thumb,
+.tab-content::-webkit-scrollbar-thumb,
+.summary-container::-webkit-scrollbar-thumb,
+.summary-content::-webkit-scrollbar-thumb,
+.notes-container::-webkit-scrollbar-thumb,
+.chapters-container::-webkit-scrollbar-thumb,
+.doubt-content::-webkit-scrollbar-thumb,
+.doubt-history-list::-webkit-scrollbar-thumb,
+.sponsors-container::-webkit-scrollbar-thumb,
+.current-answer-display::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 10px;
+  opacity: 0.5;
 }
 
-.content::-webkit-scrollbar-thumb {
-  background: var(--bg-accent);
-  border-radius: 20px;
-}
-
-.content::-webkit-scrollbar-thumb:hover {
-  background: var(--border-color);
+#yt-summary-sidebar::-webkit-scrollbar-thumb:hover,
+.content::-webkit-scrollbar-thumb:hover,
+.tab-content::-webkit-scrollbar-thumb:hover,
+.summary-container::-webkit-scrollbar-thumb:hover,
+.summary-content::-webkit-scrollbar-thumb:hover,
+.notes-container::-webkit-scrollbar-thumb:hover,
+.chapters-container::-webkit-scrollbar-thumb:hover,
+.doubt-content::-webkit-scrollbar-thumb:hover,
+.doubt-history-list::-webkit-scrollbar-thumb:hover,
+.sponsors-container::-webkit-scrollbar-thumb:hover,
+.current-answer-display::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-color);
 }
 
 /* ========== TEXT FORMAT STYLING ========== */
@@ -1198,4 +1384,688 @@ input:checked + .slider:before {
   #doubt-input {
     padding: 8px;
   }
+}
+
+/* Add timestamp button styling */
+#add-doubt-timestamp {
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  border: 1px solid transparent;
+}
+
+#add-doubt-timestamp:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.2);
+  border-color: var(--accent-color);
+}
+
+#add-doubt-timestamp svg {
+  fill: currentColor;
+  opacity: 0.9;
+}
+
+/* Keep the white fill on hover */
+#add-doubt-timestamp:hover svg {
+  fill: white;
+  stroke: none;
+  opacity: 1;
+}
+
+/* Loading state for answer */
+.loading-inline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  gap: 15px;
+  z-index: 5;
+}
+
+.loading-inline .spinner-small {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(var(--accent-color-rgb), 0.2);
+  border-top-color: var(--accent-color);
+  margin-right: 0;
+}
+
+.current-answer-display {
+  position: relative;
+  height: 100%;
+}
+
+.loading-inline p {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin: 0;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+.loading-inline::after {
+  content: '';
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(var(--accent-color-rgb), 0.6),
+    transparent
+  );
+  animation: loading-line 1.5s ease-in-out infinite;
+}
+
+@keyframes loading-line {
+  0% {
+    width: 0px;
+    opacity: 0;
+  }
+  50% {
+    width: 100px;
+    opacity: 1;
+  }
+  100% {
+    width: 0px;
+    opacity: 0;
+  }
+}
+
+/* Word by word loading animation */
+.loading-words {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 12px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.loading-dots {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.loading-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-color);
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.loading-dot:nth-child(1) {
+  animation: pulse-dot 1.2s ease infinite;
+}
+
+.loading-dot:nth-child(2) {
+  animation: pulse-dot 1.2s ease 0.2s infinite;
+}
+
+.loading-dot:nth-child(3) {
+  animation: pulse-dot 1.2s ease 0.4s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+/* Error message styling */
+.error-message {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background-color: rgba(var(--error-color-rgb, 255, 87, 87), 0.1);
+  border-left: 3px solid var(--error-color, #ff5757);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.error-message p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.error-message p:first-child {
+  color: var(--error-color, #ff5757);
+  font-weight: 500;
+}
+
+/* Processing button state */
+.submit-button.processing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+#jump-to-timestamp svg {
+  margin-left: 1px; /* Slight adjustment for visual centering */
+}
+
+.timestamp-button:hover svg {
+  stroke: white;
+}
+
+/* Remove outline from all buttons */
+button {
+  outline: none !important;
+}
+
+button::-moz-focus-inner {
+  border: 0;
+}
+
+/* Ensure timestamp buttons never show outlines */
+.timestamp-button {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.timestamp-button:focus,
+.timestamp-button:active,
+.timestamp-button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Empty answer state styles */
+.empty-answer-state {
+  display: none; /* Hidden by default */
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 8px;
+  text-align: center;
+  color: var(--text-secondary);
+  overflow: hidden;
+  background-color: var(--bg-primary);
+  border-radius: 4px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+}
+
+/* Add a special condition to always ensure it's visible when shown */
+.empty-answer-state[style*="display: flex"] {
+  display: flex !important;
+}
+
+.empty-answer-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 0.7;
+  color: var(--accent-color);
+  margin-bottom: 0;
+  width: 28px;
+  height: 28px;
+}
+
+.empty-answer-state h4 {
+  margin: 5px 0 3px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 11;
+}
+
+.empty-answer-state p {
+  margin: 0 0 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  max-width: 85%;
+  opacity: 0.9;
+  z-index: 11;
+}
+
+.question-tips {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  list-style-position: inside;
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  width: 85%;
+  max-width: 250px;
+  z-index: 11;
+}
+
+.question-tips li {
+  margin-bottom: 2px;
+  position: relative;
+  padding-left: 12px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.question-tips li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--accent-color);
+}
+
+.question-tips li:hover {
+  transform: translateX(2px);
+}
+
+/* Add subtle hover effect to the question input */
+#doubt-input:hover {
+  border-color: var(--accent-color);
+  transition: border-color 0.2s ease;
+}
+
+/* Improve empty answer state icon */
+.empty-answer-icon svg {
+  filter: drop-shadow(0 0 3px rgba(255, 69, 0, 0.2));
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.empty-answer-state:hover .empty-answer-icon svg {
+  transform: scale(1.05);
+  filter: drop-shadow(0 0 5px rgba(255, 69, 0, 0.3));
+}
+
+/* Subtle focus effect for submit button */
+.submit-button:focus {
+  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.2);
+  outline: none;
+}
+
+/* Improve timestamp button appearance */
+.timestamp-button {
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.timestamp-button:not(:disabled):active {
+  transform: scale(0.95);
+}
+
+/* Add subtle animation to the empty state tips */
+.question-tips li {
+  transition: transform 0.2s ease;
+}
+
+.question-tips li:hover {
+  transform: translateX(2px);
+}
+
+/* Styles for when fullscreen is active */
+/* body.yt-enhancer-fullscreen-active {
+  overflow: hidden;
+} */
+
+/* Fullscreen answer overlay */
+.fullscreen-answer-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #1a1a1a; /* Lighter dark background */
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  color: rgba(255, 255, 255, 0.9); /* Slightly off-white for better readability */
+  overflow: hidden; /* Changed from overflow-y: auto to prevent double scrollbar */
+  /* Transform for animation */
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.98);
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.fullscreen-answer-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.fullscreen-answer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  /* Add animation properties */
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  /* Prevent overflow */
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.fullscreen-answer-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--accent-color); /* Use extension's accent color from CSS variable */
+  /* Prevent overflow */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fullscreen-close-button {
+  background-color: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 20px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+}
+
+.fullscreen-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
+  color: #ffffff;
+}
+
+/* Add subtle highlight for important information */
+.fullscreen-answer mark,
+.fullscreen-answer span[style*="background"] {
+  background-color: rgba(58, 134, 255, 0.15); /* Using var(--accent-color-rgb) values */
+  color: #ffffff;
+  padding: 0 3px;
+  border-radius: 2px;
+}
+
+/* Add better styling for tables */
+.fullscreen-answer table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+
+.fullscreen-answer th {
+  background-color: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  font-weight: 600;
+  padding: 8px;
+  text-align: left;
+}
+
+.fullscreen-answer td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fullscreen-answer tr:nth-child(even) {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+/* Animate elements when parent is active */
+.fullscreen-answer-overlay.active .fullscreen-question,
+.fullscreen-answer-overlay.active .fullscreen-answer {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Styles for the doubt container when fullscreen is active */
+.doubt-container.fullscreen-active {
+  /* No specific styles needed but keeping the class for potential future use */
+}
+
+/* Make sure the fullscreen overlay works correctly within the doubt container */
+.doubt-container .fullscreen-answer-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+  background-color: #1a1a1a; /* Lighter dark background */
+}
+
+/* Ultra-thin scrollbar for the fullscreen overlay and its contents */
+.fullscreen-answer-overlay::-webkit-scrollbar,
+.fullscreen-content::-webkit-scrollbar,
+.fullscreen-question::-webkit-scrollbar {
+  display: none; /* Hide scrollbars for these elements */
+}
+
+/* Transparent track for all scrollbars */
+.fullscreen-answer-overlay::-webkit-scrollbar-track,
+.fullscreen-content::-webkit-scrollbar-track,
+.fullscreen-question::-webkit-scrollbar-track,
+.fullscreen-answer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Subtle thumb for all scrollbars */
+.fullscreen-answer-overlay::-webkit-scrollbar-thumb,
+.fullscreen-content::-webkit-scrollbar-thumb,
+.fullscreen-question::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 0;
+}
+
+/* Slightly more visible on hover for all scrollbars */
+.fullscreen-answer-overlay:hover::-webkit-scrollbar-thumb,
+.fullscreen-content:hover::-webkit-scrollbar-thumb,
+.fullscreen-question:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Add universal box-sizing to all fullscreen elements */
+.fullscreen-answer-overlay *,
+.fullscreen-answer-overlay *::before,
+.fullscreen-answer-overlay *::after {
+  box-sizing: border-box;
+}
+
+/* Styling for code blocks and syntax highlighting in the answer */
+.fullscreen-answer code {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-family: monospace;
+  color: #e6e6e6;
+}
+
+.fullscreen-answer pre {
+  background-color: rgba(0, 0, 0, 0.3);
+  padding: 10px;
+  border-radius: 5px;
+  overflow-x: auto;
+}
+
+/* Add emphasis for bold and italic text */
+.fullscreen-answer strong {
+  color: white;
+  font-weight: 600;
+}
+
+.fullscreen-answer em {
+  color: #e1e1e1;
+  font-style: italic;
+}
+
+/* Style links in the fullscreen answer */
+.fullscreen-answer a {
+  color: var(--accent-color); /* Use accent color for links */
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(58, 134, 255, 0.5);
+  transition: border-bottom-color 0.2s, color 0.2s;
+}
+
+.fullscreen-answer a:hover {
+  color: #7ee3ff;
+  border-bottom-color: #7ee3ff;
+}
+
+/* Improve readability of lists */
+.fullscreen-answer ul,
+.fullscreen-answer ol {
+  padding-left: 1.5em;
+  margin: 0.8em 0;
+}
+
+.fullscreen-answer li {
+  margin-bottom: 0.5em;
+}
+
+/* Improve heading styles */
+.fullscreen-answer h1,
+.fullscreen-answer h2,
+.fullscreen-answer h3,
+.fullscreen-answer h4 {
+  margin-top: 1.2em;
+  margin-bottom: 0.6em;
+  color: #ffffff;
+}
+
+/* Style blockquotes */
+.fullscreen-answer blockquote {
+  border-left: 3px solid var(--accent-color);
+  padding-left: 1em;
+  margin-left: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-style: italic;
+}
+
+/* Animate header when parent is active */
+.fullscreen-answer-overlay.active .fullscreen-answer-header {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fullscreen-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100%;
+  margin: 0 auto;
+  width: 100%;
+  padding-right: 8px;
+  /* Add a slight text shadow for better readability */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.fullscreen-question {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: rgba(255, 255, 255, 0.1); /* Slightly lighter for better contrast */
+  border-radius: 10px;
+  border-left: 4px solid var(--accent-color); /* Use extension's accent color */
+  /* Add animation properties */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition-delay: 0.1s;
+  /* Prevent content overflow */
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.fullscreen-answer {
+  font-size: 16px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  padding: 16px 8px 16px 16px; /* Adjusted right padding */
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  background-color: rgba(255, 255, 255, 0.07); /* Slightly lighter for better contrast */
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  /* Animation properties */
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition-delay: 0.2s;
+  /* Prevent content overflow */
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  max-width: 100%;
+  position: relative;
+  /* Firefox scrollbar - thin instead of none */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  color: rgba(255, 255, 255, 0.85); /* Slightly dimmer than the overlay text for better reading */
+  letter-spacing: 0.01em; /* Slightly increased letter spacing */
+}
+
+/* Thin but visible scrollbar for answer section */
+.fullscreen-answer::-webkit-scrollbar {
+  width: 6px; /* Increased width for better visibility */
+  height: 6px;
+}
+
+/* Visible thumb for scrollbar */
+.fullscreen-answer::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 3px; /* Rounded edges */
+}
+
+/* Slightly more visible on hover */
+.fullscreen-answer:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Add scrollbar track styling */
+.fullscreen-answer::-webkit-scrollbar-track {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
 }
