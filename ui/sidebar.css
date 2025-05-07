@@ -1,3 +1,8 @@
+/* Universal Box Model */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 /* ========== VARIABLES AND ANIMATIONS ========== */
 :root {
   --bg-primary: #0f0f0f;
@@ -47,6 +52,11 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ========== MAIN SIDEBAR STRUCTURE ========== */
@@ -155,8 +165,12 @@
   height: 2px;
   background-color: var(--accent-color);
   transition: transform 0.3s ease;
-  width: 20%;
+  width: 33.33%;
   transform: translateX(0);
+}
+
+.tab-navigation[data-active="summary"]::after {
+  transform: translateX(0%);
 }
 
 .tab-navigation[data-active="doubt"]::after {
@@ -166,15 +180,6 @@
 .tab-navigation[data-active="notes"]::after {
   transform: translateX(200%);
 }
-
-.tab-navigation[data-active="chapters"]::after {
-  transform: translateX(300%);
-}
-
-.tab-navigation[data-active="sponsors"]::after {
-  transform: translateX(400%);
-}
-
 
 .tab-navigation::-webkit-scrollbar {
   display: none;
@@ -409,200 +414,30 @@
   transform: translateX(100%);
 }
 
-/* ========== CHAPTERS TAB ========== */
-.chapters-container {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.chapters-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.chapters-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.chapters-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.chapter-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: var(--bg-accent);
-  border-radius: 8px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.chapter-item:hover {
-  background: var(--border-color);
-}
-
-.chapter-timestamp {
-  font-family: monospace;
-  color: var(--accent-color);
-  font-weight: 500;
-  min-width: 60px;
-}
-
-.chapter-title {
-  flex: 1;
-}
-
-/* ========== SPONSORS TAB ========== */
-.sponsors-container {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.sponsors-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.sponsors-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.sponsor-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 40px;
-  height: 20px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: var(--bg-accent);
-  transition: 0.4s;
-}
-
-.slider:before {
-  position: absolute;
-  content: '';
-  height: 16px;
-  width: 16px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-}
-
-input:checked + .slider {
-  background-color: var(--accent-color);
-}
-
-input:checked + .slider:before {
-  transform: translateX(20px);
-}
-
-.slider.round {
-  border-radius: 34px;
-}
-
-.slider.round:before {
-  border-radius: 50%;
-}
-
-.sponsors-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.sponsor-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px;
-  background: var(--bg-accent);
-  border-radius: 8px;
-}
-
-.sponsor-time {
-  display: flex;
-  gap: 8px;
-  font-family: monospace;
-}
-
-.sponsor-category {
-  background: var(--accent-color);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-}
-
-.skip-sponsor-button {
-  background: var(--bg-accent);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.skip-sponsor-button:hover {
-  background: var(--border-color);
-}
-
-/* ========== ENHANCED DOUBT TAB ========== */
+/* ========== ENHANCED DOUBT TAB (CHATBOT STYLE) ========== */
 .doubt-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
 }
 
 .doubt-header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  padding: 8px 0 6px;
-  margin-bottom: 12px;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 0;
+  background-color: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
   position: relative;
+  flex-shrink: 0;
 }
 
 .doubt-header h3 {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin: 0;
   color: var(--text-primary);
   position: relative;
@@ -610,424 +445,460 @@ input:checked + .slider:before {
   align-items: center;
 }
 
-.doubt-header h3::before {
-  content: "";
-  display: inline-block;
-  width: 4px;
-  height: 16px;
-  background-color: var(--accent-color);
-  margin-right: 8px;
-  border-radius: 2px;
-}
-
-/* Main content container for doubt tab */
 .doubt-content {
   display: flex;
   flex-direction: column;
-  gap: 12px;
   height: 100%;
   overflow: hidden;
+  background-color: var(--bg-primary);
 }
 
-/* Input section */
-.doubt-input-section {
+/* Chat Messages Area */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 4px;
-  background-color: var(--bg-secondary);
-}
-
-.doubt-input-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-.timestamp-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 1;
-}
-
-.timestamp-display {
-  padding: 6px 12px;
-  background-color: var(--bg-primary);
-  border-radius: 4px;
-  font-size: 13px;
-  flex-grow: 1;
-  color: var(--text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: flex;
-  align-items: center;
-  height: 32px;
+  gap: 0;
+  scrollbar-width: thin;
+  scroll-behavior: smooth;
   box-sizing: border-box;
+  height: 100%;
 }
 
-/* Add a pulse animation for timestamp feedback */
-.timestamp-pulse {
-  animation: pulse-highlight 1s ease-in-out;
-}
-
-@keyframes pulse-highlight {
-  0% { color: var(--accent-color); }
-  50% { color: var(--accent-secondary); }
-  100% { color: var(--accent-color); }
-}
-
-.timestamp-button {
-  background-color: var(--bg-accent);
+/* Message Content - Base styling */
+.message-content {
+  background-color: var(--bg-secondary);
+  padding: 12px 16px;
+  border-radius: 12px;
   color: var(--text-primary);
-  border: none;
-  padding: 0;
-  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  animation: fadeIn 0.3s ease-out;
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* Ensure paragraphs inside message content have proper spacing */
+.message-content p {
+  margin: 0 0 12px 0;
+}
+
+.message-content p:last-child {
+  margin-bottom: 0;
+}
+
+/* Ensure content inside messages doesn't overflow */
+.message-content pre,
+.message-content code {
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+/* Message Bubbles */
+.message {
+  display: flex;
+  gap: 12px;
+  animation: fadeIn 0.3s ease-out;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 20px;
+  overflow: visible;
+}
+
+/* Message itself shouldn't have overflow:hidden as it cuts off the content */
+.message {
+  overflow: visible;
+}
+
+/* User Message Styles */
+.user-message {
+  justify-content: flex-end;
+  margin-left: auto;
+  width: 100%;
+}
+
+.user-message .message-content {
+  background-color: var(--accent-color);
+  color: #fff;
+  margin-left: auto;
+  max-width: 92%;
+  border-radius: 14px 2px 14px 14px;
+}
+
+/* Assistant Message Layout */
+.assistant-message {
+  flex-direction: row;
+  align-items: flex-start;
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.assistant-avatar {
+  width: 24px;
+  height: 24px;
+  background-color: var(--accent-color);
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.assistant-avatar:hover {
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.assistant-avatar svg {
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.assistant-message .message-content {
+  margin-left: 30px;
+  width: calc(100% - 30px);
+  border-top-left-radius: 2px;
+  border-radius: 2px 14px 14px 14px;
+  margin-top: 0;
+  box-sizing: border-box;
+  background-color: var(--bg-secondary);
+}
+
+/* Welcome Message special styling */
+.welcome-message,
+.welcome-message .message-content,
+.welcome-message .message-content p,
+.welcome-message .assistant-avatar,
+.welcome-message:hover {
+  display: none;
+}
+
+.timestamp-badge {
+  display: inline-block;
+  background-color: rgba(var(--accent-color-rgb), 0.2);
+  color: var(--accent-color);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 8px;
   cursor: pointer;
-  transition: background-color 0.2s ease, transform 0.1s ease;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
-  overflow: hidden;
+  transition: background-color 0.2s ease;
+}
+
+.timestamp-badge:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.3);
+  transform: translateY(-1px);
+}
+
+.timestamp-badge:active {
+  transform: translateY(0);
+}
+
+/* Loading indicator */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+}
+
+.typing-message {
+  margin-bottom: 0;
+  margin-top: 0;
+  padding-top: 16px;
+  overflow: visible;
+}
+
+.typing-message .message-content {
+  margin-left: 30px;
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  width: calc(100% - 30px);
+  box-sizing: border-box;
+  margin-top: 0;
+}
+
+.typing-dots-container {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+/* Ensure the assistant avatar for typing doesn't overlap */
+.typing-message .assistant-avatar {
+  z-index: 2;
+}
+
+/* Make the dots more visible */
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: typingAnimation 1.4s infinite ease-in-out;
+}
+
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 0.5;
+  }
+}
+
+/* Chat Input Area */
+.chat-input-container {
+  display: flex;
+  align-items: center;
+  padding: 16px 20px;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  gap: 12px;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.chat-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  background-color: var(--bg-primary);
+  border-radius: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  transition: all 0.25s ease;
+  position: relative;
+  min-height: 38px;
+  box-sizing: border-box;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.chat-input-wrapper:focus-within {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.1);
+}
+
+#doubt-input {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: none;
+  padding: 6px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 38px;
+  max-height: 120px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+#doubt-input:focus {
   outline: none;
 }
 
-.timestamp-button:focus {
-  outline: none;
-  box-shadow: none;
+.chat-send-button {
+  background: transparent;
+  border: none;
+  color: var(--accent-color);
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  opacity: 0.8;
+  min-width: 30px;
+  min-height: 30px;
+  align-self: flex-end;
+  margin-bottom: 2px;
 }
 
-.timestamp-button:hover {
-  background-color: var(--accent-color);
-  box-shadow: none;
+.chat-send-button .spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(var(--accent-color-rgb), 0.2);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+.chat-send-button:hover {
+  opacity: 1;
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  transform: translateY(-1px);
+}
+
+.chat-send-button:active {
+  transform: translateY(0);
+}
+
+.chat-send-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.chat-send-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.timestamp-button-container {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.timestamp-button {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .timestamp-button svg {
-  transition: color 0.2s ease;
-  flex-shrink: 0;
-  stroke-width: 1.5px;
-  fill: none;
+  width: 22px;
+  height: 22px;
 }
 
-.timestamp-button:hover svg {
-  stroke: white;
+.timestamp-button:hover:not(:disabled) {
+  color: var(--accent-color);
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
-.timestamp-button:active {
-  background-color: var(--accent-secondary);
+.timestamp-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .timestamp-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background-color: var(--bg-accent);
-  box-shadow: none;
 }
 
-#doubt-input {
-  width: 100%;
-  height: 70px;
-  resize: none;
-  padding: 10px;
+/* Code Formatting */
+.message-content pre {
   background-color: var(--bg-primary);
-  border: none;
-  border-radius: 4px;
-  color: var(--text-primary);
-  font-size: 14px;
-  line-height: 1.5;
-  box-sizing: border-box;
-}
-
-#doubt-input:focus {
-  outline: 1px solid var(--accent-color);
-}
-
-.submit-button {
-  padding: 0 16px;
-  height: 32px;
-  background-color: var(--accent-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 120px;
-}
-
-.submit-button:hover {
-  background-color: var(--accent-secondary);
-}
-
-/* Answer section */
-.doubt-answer-section {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-secondary);
-  border-radius: 4px;
   padding: 10px;
-  flex: 0 0 auto;
-  height: 180px;
-  max-height: 180px;
-  overflow: hidden;
-  margin-bottom: 10px;
-  transition: all 0.3s ease;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.doubt-answer-section.hidden {
-  height: 0;
-  max-height: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-  opacity: 0;
-  transform: translateY(-10px);
-  pointer-events: none;
-}
-
-.current-answer-container {
-  position: relative;
-  z-index: 20;
-  height: 100%;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.current-answer-container.hidden {
-  display: none;
-}
-
-#fullscreen-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  opacity: 0.6;
-  background-color: rgba(0, 0, 0, 0.5);
-  border-radius: 3px;
-  padding: 4px;
-  width: 28px;
-  height: 28px;
-  z-index: 25;
-  border: none;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s ease, background-color 0.2s ease, transform 0.1s ease;
-}
-
-#fullscreen-button:hover {
-  opacity: 1;
-  background-color: rgba(0, 0, 0, 0.7);
-  transform: scale(1.05);
-}
-
-#fullscreen-button:active {
-  transform: scale(0.95);
-}
-
-/* Ensure the question doesn't cover the button */
-.current-question-display {
-  font-size: 13px;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-  padding-left: 6px;
-  padding-right: 36px;
-  border-left: 2px solid var(--accent-color);
-  white-space: normal;
-  overflow: visible;
-  word-wrap: break-word;
-}
-
-.current-answer-display {
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-  white-space: pre-wrap;
-  overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-width: thin;
-}
-
-/* Custom scrollbar for answer display */
-.current-answer-display::-webkit-scrollbar {
-  width: 4px;
-}
-
-.current-answer-display::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.current-answer-display::-webkit-scrollbar-thumb {
-  background-color: var(--border-color);
   border-radius: 4px;
-}
-
-/* Previous questions section */
-.doubt-history-section {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  overflow: hidden;
-  min-height: 0; /* Important for proper flexbox behavior */
-  border-top: 1px solid var(--border-color);
-  padding-top: 12px;
-  margin-top: 12px;
-}
-
-/* Improved header */
-.history-section-header {
-  position: relative;
-  padding-left: 12px;
-  font-weight: 500;
-  margin-bottom: 12px;
-  font-size: 15px;
-  color: var(--text-primary);
-}
-
-.history-section-header::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 4px;
-  height: 14px;
-  background-color: var(--accent-color);
-  border-radius: 2px;
-  opacity: 0.8;
-}
-
-.doubt-history-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  overflow-y: auto;
-  flex: 1;
-  padding-right: 4px;
-}
-
-.doubt-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Improved history item layout */
-.doubt-history-item {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  padding: 8px 10px;
-  border-radius: 4px;
-  margin-bottom: 6px;
-  background-color: var(--bg-secondary);
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-left 0.2s ease;
-  min-height: 40px;
-}
-
-.doubt-history-item:hover {
-  background-color: var(--bg-accent);
-}
-
-.doubt-history-item.active {
-  border-left: 2px solid var(--accent-color);
-  padding-left: 8px;
-}
-
-.history-item-content {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  flex: 1;
-  overflow: hidden;
-  min-width: 0; /* Important for flex child text truncation */
-}
-
-.history-timestamp {
-  font-size: 11px;
-  color: var(--accent-color);
-  opacity: 0.8;
-  white-space: nowrap;
-  margin-right: 8px;
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.history-question {
+  overflow-x: auto;
+  font-family: monospace;
   font-size: 13px;
-  color: var(--text-primary);
-  line-height: 1.3;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: -webkit-box;
-  /* Allow dynamic height */
-  line-clamp: unset;
-  -webkit-line-clamp: unset;
-  -webkit-box-orient: vertical;
-  flex: 1;
-  min-width: 0; /* Important for text truncation */
-  word-break: break-word;
+  margin: 8px 0;
+  max-width: 100%;
 }
 
-.history-actions {
-  display: flex;
-  gap: 4px;
-  margin-left: 6px;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.history-view-btn,
-.history-delete-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
+.message-content code {
+  background-color: var(--bg-primary);
+  padding: 2px 4px;
   border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  color: var(--text-secondary);
+  font-family: monospace;
+  font-size: 13px;
 }
 
-.history-view-btn {
-  color: var(--accent-color);
-  opacity: 0.7;
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .chat-messages {
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .chat-input-container {
+    padding: 8px 12px;
+  }
+
+  .timestamp-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .user-message .message-content {
+    max-width: 85%;
+  }
 }
 
-.history-view-btn:hover {
-  background-color: rgba(var(--accent-color-rgb), 0.15);
-  opacity: 1;
-}
+/* Adjustments for smaller screens */
+@media (max-width: 480px) {
+  .message-content {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 
-.history-delete-btn:hover {
-  background-color: rgba(255, 107, 107, 0.15);
-  color: #ff6b6b;
-}
+  .assistant-message .message-content,
+  .typing-message .message-content {
+    margin-left: 20px;
+    width: calc(100% - 20px);
+  }
 
-.doubt-history-item:hover .history-view-btn,
-.doubt-history-item:hover .history-delete-btn {
-  opacity: 1;
+  .user-message .message-content {
+    max-width: 90%;
+  }
+
+  .chat-messages {
+    padding: 12px 8px;
+  }
+
+  .chat-input-wrapper {
+    padding: 6px 10px;
+  }
+
+  .assistant-avatar {
+    width: 24px;
+    height: 24px;
+  }
 }
 
 /* ========== COMMON BUTTONS AND UI ELEMENTS ========== */
@@ -1216,10 +1087,8 @@ input:checked + .slider:before {
 .summary-container,
 .summary-content,
 .notes-container,
-.chapters-container,
 .doubt-content,
-.doubt-history-list,
-.sponsors-container {
+.doubt-history-list {
   scrollbar-width: thin; /* Firefox */
   -ms-overflow-style: thin; /* IE and Edge */
 }
@@ -1230,10 +1099,8 @@ input:checked + .slider:before {
 .summary-container::-webkit-scrollbar,
 .summary-content::-webkit-scrollbar,
 .notes-container::-webkit-scrollbar,
-.chapters-container::-webkit-scrollbar,
 .doubt-content::-webkit-scrollbar,
 .doubt-history-list::-webkit-scrollbar,
-.sponsors-container::-webkit-scrollbar,
 .current-answer-display::-webkit-scrollbar {
   width: 3px;
   height: 3px;
@@ -1245,10 +1112,8 @@ input:checked + .slider:before {
 .summary-container::-webkit-scrollbar-track,
 .summary-content::-webkit-scrollbar-track,
 .notes-container::-webkit-scrollbar-track,
-.chapters-container::-webkit-scrollbar-track,
 .doubt-content::-webkit-scrollbar-track,
 .doubt-history-list::-webkit-scrollbar-track,
-.sponsors-container::-webkit-scrollbar-track,
 .current-answer-display::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -1259,10 +1124,8 @@ input:checked + .slider:before {
 .summary-container::-webkit-scrollbar-thumb,
 .summary-content::-webkit-scrollbar-thumb,
 .notes-container::-webkit-scrollbar-thumb,
-.chapters-container::-webkit-scrollbar-thumb,
 .doubt-content::-webkit-scrollbar-thumb,
 .doubt-history-list::-webkit-scrollbar-thumb,
-.sponsors-container::-webkit-scrollbar-thumb,
 .current-answer-display::-webkit-scrollbar-thumb {
   background-color: var(--border-color);
   border-radius: 10px;
@@ -1275,10 +1138,8 @@ input:checked + .slider:before {
 .summary-container::-webkit-scrollbar-thumb:hover,
 .summary-content::-webkit-scrollbar-thumb:hover,
 .notes-container::-webkit-scrollbar-thumb:hover,
-.chapters-container::-webkit-scrollbar-thumb:hover,
 .doubt-content::-webkit-scrollbar-thumb:hover,
 .doubt-history-list::-webkit-scrollbar-thumb:hover,
-.sponsors-container::-webkit-scrollbar-thumb:hover,
 .current-answer-display::-webkit-scrollbar-thumb:hover {
   background-color: var(--accent-color);
 }
@@ -1563,6 +1424,10 @@ input:checked + .slider:before {
   font-weight: 500;
 }
 
+.error-message .assistant-avatar {
+  background-color: #ff4444;
+}
+
 /* Processing button state */
 .submit-button.processing {
   display: flex;
@@ -1694,378 +1559,195 @@ button::-moz-focus-inner {
   color: var(--accent-color);
 }
 
-.question-tips li:hover {
-  transform: translateX(2px);
+.suggested-questions,
+.suggestions-title,
+.suggestion-chips,
+.suggestion-chip,
+.suggestion-chip:hover,
+.suggestion-chip:active {
+  display: none;
 }
 
-/* Add subtle hover effect to the question input */
-#doubt-input:hover {
-  border-color: var(--accent-color);
-  transition: border-color 0.2s ease;
+/* Error message styling */
+.error-message .message-content {
+  background-color: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
 }
 
-/* Improve empty answer state icon */
-.empty-answer-icon svg {
-  filter: drop-shadow(0 0 3px rgba(255, 69, 0, 0.2));
-  transition: transform 0.3s ease, filter 0.3s ease;
+.error-message .assistant-avatar {
+  background-color: #ff4444;
 }
 
-.empty-answer-state:hover .empty-answer-icon svg {
-  transform: scale(1.05);
-  filter: drop-shadow(0 0 5px rgba(255, 69, 0, 0.3));
-}
-
-/* Subtle focus effect for submit button */
-.submit-button:focus {
-  box-shadow: 0 0 0 2px rgba(255, 69, 0, 0.2);
-  outline: none;
-}
-
-/* Improve timestamp button appearance */
-.timestamp-button {
-  transition: background-color 0.2s ease, transform 0.1s ease;
-}
-
-.timestamp-button:not(:disabled):active {
-  transform: scale(0.95);
-}
-
-/* Add subtle animation to the empty state tips */
-.question-tips li {
-  transition: transform 0.2s ease;
-}
-
-.question-tips li:hover {
-  transform: translateX(2px);
-}
-
-/* Styles for when fullscreen is active */
-/* body.yt-enhancer-fullscreen-active {
-  overflow: hidden;
-} */
-
-/* Fullscreen answer overlay */
-.fullscreen-answer-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #1a1a1a; /* Lighter dark background */
-  z-index: 1000;
+/* Typing indicator styles */
+.typing-indicator {
   display: flex;
-  flex-direction: column;
-  padding: 20px;
-  color: rgba(255, 255, 255, 0.9); /* Slightly off-white for better readability */
-  overflow: hidden; /* Changed from overflow-y: auto to prevent double scrollbar */
-  /* Transform for animation */
-  opacity: 0;
-  pointer-events: none;
-  transform: scale(0.98);
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-}
-
-.fullscreen-answer-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1);
-}
-
-.fullscreen-answer-header {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  /* Add animation properties */
-  opacity: 0;
-  transform: translateY(-10px);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-  /* Prevent overflow */
-  width: 100%;
-  box-sizing: border-box;
-  max-width: 100%;
+  gap: 4px;
+  padding: 8px 12px;
 }
 
-.fullscreen-answer-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: var(--accent-color); /* Use extension's accent color from CSS variable */
-  /* Prevent overflow */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.typing-dot {
+  width: 8px;
+  height: 8px;
+  background-color: var(--text-secondary);
+  border-radius: 50%;
+  opacity: 0.7;
+  animation: typingAnimation 1.4s infinite ease-in-out;
 }
 
-.fullscreen-close-button {
-  background-color: rgba(255, 255, 255, 0.1);
+.typing-dot:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes typingAnimation {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+    opacity: 0.5;
+  }
+}
+
+/* Modern Input Design */
+.input-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: 12px;
+}
+
+.input-action-button {
+  background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 20px;
-  cursor: pointer;
+  color: var(--text-secondary);
   width: 32px;
   height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s ease, transform 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.fullscreen-close-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  transform: rotate(90deg);
-  color: #ffffff;
+.input-action-button:hover {
+  color: var(--accent-color);
+  background-color: rgba(var(--accent-color-rgb), 0.1);
 }
 
-/* Add subtle highlight for important information */
-.fullscreen-answer mark,
-.fullscreen-answer span[style*="background"] {
-  background-color: rgba(58, 134, 255, 0.15); /* Using var(--accent-color-rgb) values */
-  color: #ffffff;
-  padding: 0 3px;
-  border-radius: 2px;
+#submit-doubt {
+  color: var(--accent-color);
 }
 
-/* Add better styling for tables */
-.fullscreen-answer table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 1em 0;
+#submit-doubt:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.2);
+  transform: translateY(-1px);
 }
 
-.fullscreen-answer th {
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #ffffff;
+/* Update chat input wrapper to work with buttons inside */
+.chat-input-wrapper {
+  align-items: center;
+}
+
+#doubt-input {
+  min-height: 24px;
+}
+
+/* Hide old button styles that are no longer needed */
+.timestamp-button-container,
+.timestamp-button,
+.chat-send-button {
+  display: none;
+}
+
+/* Welcome section for doubt tab */
+.doubt-welcome-title {
+  margin: 20px 0 10px 0;
+  padding: 0 20px;
+  font-size: 18px;
   font-weight: 600;
-  padding: 8px;
-  text-align: left;
+  color: var(--text-primary);
+  text-align: center;
 }
 
-.fullscreen-answer td {
-  padding: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.doubt-welcome-text {
+  margin: 0 0 15px 0;
+  padding: 0 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: center;
 }
 
-.fullscreen-answer tr:nth-child(even) {
-  background-color: rgba(255, 255, 255, 0.03);
+.doubt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 20px;
+  margin-bottom: 20px;
+  justify-content: center;
 }
 
-/* Animate elements when parent is active */
-.fullscreen-answer-overlay.active .fullscreen-question,
-.fullscreen-answer-overlay.active .fullscreen-answer {
-  opacity: 1;
-  transform: translateY(0);
+.doubt-tag {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: rgba(var(--accent-color-rgb), 0.1);
+  color: var(--accent-color);
+  font-size: 13px;
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-/* Styles for the doubt container when fullscreen is active */
-.doubt-container.fullscreen-active {
-  /* No specific styles needed but keeping the class for potential future use */
+.doubt-tag:hover {
+  background-color: rgba(var(--accent-color-rgb), 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Make sure the fullscreen overlay works correctly within the doubt container */
-.doubt-container .fullscreen-answer-overlay.active {
-  opacity: 1;
-  pointer-events: auto;
-  transform: scale(1);
-  background-color: #1a1a1a; /* Lighter dark background */
+.doubt-tag:active {
+  transform: scale(0.98);
 }
 
-/* Ultra-thin scrollbar for the fullscreen overlay and its contents */
-.fullscreen-answer-overlay::-webkit-scrollbar,
-.fullscreen-content::-webkit-scrollbar,
-.fullscreen-question::-webkit-scrollbar {
-  display: none; /* Hide scrollbars for these elements */
-}
-
-/* Transparent track for all scrollbars */
-.fullscreen-answer-overlay::-webkit-scrollbar-track,
-.fullscreen-content::-webkit-scrollbar-track,
-.fullscreen-question::-webkit-scrollbar-track,
-.fullscreen-answer::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Subtle thumb for all scrollbars */
-.fullscreen-answer-overlay::-webkit-scrollbar-thumb,
-.fullscreen-content::-webkit-scrollbar-thumb,
-.fullscreen-question::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-radius: 0;
-}
-
-/* Slightly more visible on hover for all scrollbars */
-.fullscreen-answer-overlay:hover::-webkit-scrollbar-thumb,
-.fullscreen-content:hover::-webkit-scrollbar-thumb,
-.fullscreen-question:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
-}
-
-/* Add universal box-sizing to all fullscreen elements */
-.fullscreen-answer-overlay *,
-.fullscreen-answer-overlay *::before,
-.fullscreen-answer-overlay *::after {
-  box-sizing: border-box;
-}
-
-/* Styling for code blocks and syntax highlighting in the answer */
-.fullscreen-answer code {
-  background-color: rgba(0, 0, 0, 0.3);
-  padding: 2px 5px;
-  border-radius: 3px;
-  font-family: monospace;
-  color: #e6e6e6;
-}
-
-.fullscreen-answer pre {
-  background-color: rgba(0, 0, 0, 0.3);
-  padding: 10px;
-  border-radius: 5px;
-  overflow-x: auto;
-}
-
-/* Add emphasis for bold and italic text */
-.fullscreen-answer strong {
+.doubt-tag.selected {
+  background-color: var(--accent-color);
   color: white;
-  font-weight: 600;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
 }
 
-.fullscreen-answer em {
-  color: #e1e1e1;
-  font-style: italic;
-}
-
-/* Style links in the fullscreen answer */
-.fullscreen-answer a {
-  color: var(--accent-color); /* Use accent color for links */
-  text-decoration: none;
-  border-bottom: 1px dotted rgba(58, 134, 255, 0.5);
-  transition: border-bottom-color 0.2s, color 0.2s;
-}
-
-.fullscreen-answer a:hover {
-  color: #7ee3ff;
-  border-bottom-color: #7ee3ff;
-}
-
-/* Improve readability of lists */
-.fullscreen-answer ul,
-.fullscreen-answer ol {
-  padding-left: 1.5em;
-  margin: 0.8em 0;
-}
-
-.fullscreen-answer li {
-  margin-bottom: 0.5em;
-}
-
-/* Improve heading styles */
-.fullscreen-answer h1,
-.fullscreen-answer h2,
-.fullscreen-answer h3,
-.fullscreen-answer h4 {
-  margin-top: 1.2em;
-  margin-bottom: 0.6em;
-  color: #ffffff;
-}
-
-/* Style blockquotes */
-.fullscreen-answer blockquote {
-  border-left: 3px solid var(--accent-color);
-  padding-left: 1em;
-  margin-left: 0;
-  color: rgba(255, 255, 255, 0.75);
-  font-style: italic;
-}
-
-/* Animate header when parent is active */
-.fullscreen-answer-overlay.active .fullscreen-answer-header {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fullscreen-content {
-  flex: 1;
+/* Make sure messages appear below the welcome section */
+.chat-messages {
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
-  max-width: 100%;
-  margin: 0 auto;
+}
+
+/* Add a divider between welcome section and messages */
+.chat-messages::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 0 20px 20px 20px;
+  opacity: 0.5;
+}
+
+/* Add a divider after the tags */
+.doubt-tags::after {
+  content: '';
+  display: block;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 20px 0;
+  opacity: 0.5;
   width: 100%;
-  padding-right: 8px;
-  /* Add a slight text shadow for better readability */
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.fullscreen-question {
-  font-size: 18px;
-  font-weight: 500;
-  margin-bottom: 20px;
-  padding: 16px;
-  background-color: rgba(255, 255, 255, 0.1); /* Slightly lighter for better contrast */
-  border-radius: 10px;
-  border-left: 4px solid var(--accent-color); /* Use extension's accent color */
-  /* Add animation properties */
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-  transition-delay: 0.1s;
-  /* Prevent content overflow */
-  width: 100%;
-  box-sizing: border-box;
-  word-wrap: break-word;
-  max-width: 100%;
-}
-
-.fullscreen-answer {
-  font-size: 16px;
-  line-height: 1.7;
-  white-space: pre-wrap;
-  padding: 16px 8px 16px 16px; /* Adjusted right padding */
-  overflow-y: auto;
-  overflow-x: hidden; /* Prevent horizontal scrolling */
-  background-color: rgba(255, 255, 255, 0.07); /* Slightly lighter for better contrast */
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  /* Animation properties */
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
-  transition-delay: 0.2s;
-  /* Prevent content overflow */
-  width: 100%;
-  box-sizing: border-box;
-  word-wrap: break-word;
-  max-width: 100%;
-  position: relative;
-  /* Firefox scrollbar - thin instead of none */
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  color: rgba(255, 255, 255, 0.85); /* Slightly dimmer than the overlay text for better reading */
-  letter-spacing: 0.01em; /* Slightly increased letter spacing */
-}
-
-/* Thin but visible scrollbar for answer section */
-.fullscreen-answer::-webkit-scrollbar {
-  width: 6px; /* Increased width for better visibility */
-  height: 6px;
-}
-
-/* Visible thumb for scrollbar */
-.fullscreen-answer::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 3px; /* Rounded edges */
-}
-
-/* Slightly more visible on hover */
-.fullscreen-answer:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.5);
-}
-
-/* Add scrollbar track styling */
-.fullscreen-answer::-webkit-scrollbar-track {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 3px;
 }

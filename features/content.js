@@ -5,26 +5,6 @@ const {
     resetNotesView
 } = window.YTEnhancer.Notes;
 
-// Import chapters functions
-const {
-    setupChaptersFeature,
-    generateChapters,
-    resetChaptersView,
-    displayChapters,
-    storeChapters,
-    retrieveChapters,
-    loadStoredChapters,
-} = window.YTEnhancer.Chapters;
-
-// Import sponsors functions
-const {
-    detectSponsors,
-    displaySponsors,
-    storeSponsors,
-    retrieveSponsors,
-    setupAutoSkipSponsors,
-} = window.YTEnhancer.Sponsors;
-
 // Import summary functions
 const {
     parseMarkdown,
@@ -38,14 +18,13 @@ const {
     setupGenerateSummaryButton,
     setupCopySummaryButton,
     resetSummaryView,
-    fetchAndDisplaySummary,
+    fetchAndDisplaySummary
 } = window.YTEnhancer.Summary;
 
 // Import doubt functions
 const {
     setupDoubtFeature,
     resetDoubtView,
-    loadStoredQuestions
 } = window.YTEnhancer.Doubt;
 
 // Import utils functions
@@ -211,8 +190,6 @@ function setupVideoNavigationWatcher() {
                         // Reset all views
                         resetSummaryView();
                         resetNotesView();
-                        resetChaptersView();
-                        resetSponsorsView();
                         resetDoubtView();
 
                         // If we navigated to a valid video, load stored data
@@ -220,9 +197,7 @@ function setupVideoNavigationWatcher() {
                             await Promise.all([
                                 loadStoredSummary(),
                                 loadStoredNotes(),
-                                loadStoredChapters(),
-                                loadStoredSponsors(),
-                                loadStoredQuestions()
+                                window.YTEnhancer.Doubt.loadStoredQuestions()
                             ]);
                         }
                     } catch (error) {
@@ -253,55 +228,8 @@ function setupVideoNavigationWatcher() {
 
 // Helper function to load stored summary
 async function loadStoredSummary() {
-    try {
-        const videoId = getCurrentVideoId();
-        if (!videoId) {
-            return;
-        }
-
-        const existingSummary = await retrieveSummary();
-        if (existingSummary) {
-            const summaryElement = document.getElementById('summary');
-            if (summaryElement) {
-                summaryElement.innerHTML = parseMarkdown(existingSummary.text);
-                updateTags(existingSummary.readingTime);
-                setupCopySummaryButton();
-            }
-        } else {
-            // If no stored summary, show the generate button
-            const summaryElement = document.getElementById('summary');
-            if (summaryElement) {
-                summaryElement.innerHTML = `
-                    <div class="generate-summary-container">
-                        <button id="generate-summary-button" class="generate-button">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                            </svg>
-                            Generate Summary
-                        </button>
-                        <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
-                    </div>
-                `;
-                setupGenerateSummaryButton();
-            }
-        }
-    } catch (error) {
-        showToast('Failed to load saved summary.');
-    }
-}
-
-// Helper function to load stored sponsors
-async function loadStoredSponsors() {
-    try {
-        const sponsors = await retrieveSponsors();
-        if (sponsors) {
-            displaySponsors(sponsors);
-            setupAutoSkipSponsors(sponsors);
-        }
-    } catch (error) {
-        showToast('Failed to load saved sponsor segments.');
-    }
+    // Call the Summary module's function instead
+    return window.YTEnhancer.Summary.loadStoredSummary();
 }
 
 // Handle refresh button click
@@ -320,8 +248,6 @@ function handleRefreshButtonClick() {
     // Reset all views
     resetSummaryView();
     resetNotesView();
-    resetChaptersView();
-    resetSponsorsView();
     resetDoubtView();
     clearSummary();
 }
@@ -390,10 +316,15 @@ async function fetchAndInjectSidebarWithAnimation() {
 
             // Set up all feature buttons
             setupNotesFeature();
-            setupChaptersFeature();
-            setupSponsorsFeature();
             setupDoubtFeature();
             setupTabNavigation();
+
+            // Set initial tab underline position if it wasn't set by the setupTabNavigation function
+            const tabNavigation = document.querySelector('.tab-navigation');
+            const activeTab = document.querySelector('.tab-button.active');
+            if (tabNavigation && activeTab && !tabNavigation.hasAttribute('data-active')) {
+                tabNavigation.setAttribute('data-active', activeTab.dataset.tab);
+            }
         } catch (error) {
             showToast('Failed to set up sidebar controls. Please reload the page.');
         }
@@ -404,17 +335,13 @@ async function fetchAndInjectSidebarWithAnimation() {
             if (!isWatchingVideo()) {
                 resetSummaryView();
                 resetNotesView();
-                resetChaptersView();
-                resetSponsorsView();
                 resetDoubtView();
             } else {
                 // If we are watching a video, load the stored state
                 await Promise.all([
                     loadStoredSummary(),
                     loadStoredNotes(),
-                    loadStoredChapters(),
-                    loadStoredSponsors(),
-                    loadStoredQuestions()
+                    window.YTEnhancer.Doubt.loadStoredQuestions()
                 ]);
             }
             setupVideoNavigationWatcher();
@@ -516,204 +443,81 @@ document.addEventListener('keydown', (e) => {
     }
 }, { passive: true });
 
-// Setup tab navigation
+// Set up tab navigation
 function setupTabNavigation() {
+    try {
+        // Use the improved sidebar events setup function
+        window.YTEnhancer.setupSidebarEvents();
+
+        // Restore active tab from storage if available
+        chrome.storage.local.get('activeTab', data => {
+            if (data.activeTab) {
+                const tabToActivate = document.querySelector(`.tab-button[data-tab="${data.activeTab}"]`);
+                if (tabToActivate && !tabToActivate.classList.contains('active')) {
+                    tabToActivate.click(); // This will trigger the click event which updates data-active
+                } else if (tabToActivate) {
+                    // If the tab is already active but the underline might not be set
+                    const tabNavigation = document.querySelector('.tab-navigation');
+                    if (tabNavigation) {
+                        tabNavigation.setAttribute('data-active', data.activeTab);
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error setting up tab navigation:', error);
+    }
+}
+
+// Function to initialize UI event handlers
+window.YTEnhancer.setupSidebarEvents = function () {
+    console.log('Setting up sidebar events');
+
+    // Tab navigation
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabContents = document.querySelectorAll('.tab-content');
     const tabNavigation = document.querySelector('.tab-navigation');
 
-    // Restore active tab from sessionStorage
-    const savedTab = sessionStorage.getItem('activeTab');
-    if (savedTab) {
-        const activeButton = document.querySelector(`.tab-button[data-tab="${savedTab}"]`);
-        const activeContent = document.getElementById(`${savedTab}-tab`);
-        if (activeButton && activeContent) {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            activeButton.classList.add('active');
-            activeContent.classList.add('active');
-            tabNavigation.setAttribute('data-active', savedTab);
-        }
-    }
-
     tabButtons.forEach(button => {
-        button.addEventListener('click', () => {
-            const tabId = button.dataset.tab;
+        button.addEventListener('click', function () {
+            const tab = this.dataset.tab;
 
-            // Collect all refs first
-            const activeContent = document.getElementById(`${tabId}-tab`);
-            if (!activeContent) return;
+            // Update active tab button
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
 
-            // Use requestAnimationFrame to batch all DOM updates
-            requestAnimationFrame(() => {
-                // Remove active class from all buttons and contents
-                tabButtons.forEach(btn => btn.classList.remove('active'));
-                tabContents.forEach(content => content.classList.remove('active'));
+            // Update active tab content
+            tabContents.forEach(content => content.classList.remove('active'));
+            document.getElementById(`${tab}-tab`).classList.add('active');
 
-                // Add active class to clicked button and corresponding content
-                button.classList.add('active');
-                activeContent.classList.add('active');
-
-                // Update the underline position
-                tabNavigation.setAttribute('data-active', tabId);
-
-                // Store the active tab in sessionStorage
-                sessionStorage.setItem('activeTab', tabId);
-            });
-        });
-    });
-}
-
-// Setup sponsors feature
-function setupSponsorsFeature() {
-    const sponsorsList = document.getElementById('sponsors-list');
-    if (!sponsorsList) {
-        return;
-    }
-
-    // Check for existing sponsors in storage
-    retrieveSponsors().then(async sponsors => {
-        if (sponsors) {
-            displaySponsors(sponsors);
-            setupAutoSkipSponsors(sponsors);
-        } else {
-            // Show loading state
-            sponsorsList.innerHTML = `
-                <div class="loading-state">
-                    <div class="spinner"></div>
-                    <p>Detecting sponsor segments...</p>
-                </div>
-            `;
-
-            try {
-                const videoId = getCurrentVideoId();
-                if (!videoId) {
-                    throw new Error('No video ID available');
-                }
-
-                // Use transcript manager to get transcript
-                const transcript = await getTranscript(videoId);
-                if (!transcript || transcript === "Transcript not available" || transcript === "Transcript not loaded") {
-                    showTranscriptError('sponsors');
-                    return;
-                }
-
-                const sponsors = await detectSponsors(transcript);
-                handleSponsorsResult(sponsors);
-            } catch (error) {
-                showTranscriptError('sponsors');
+            // Update the data-active attribute on the tab navigation for the underline
+            if (tabNavigation) {
+                tabNavigation.setAttribute('data-active', tab);
             }
-        }
-    }).catch(error => {
-        if (!sponsorsList) return;
-        sponsorsList.innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
-    });
 
-    // Set up auto-skip toggle
-    const sponsorBlockerToggle = document.getElementById('sponsor-blocker-toggle');
-    if (sponsorBlockerToggle) {
-        chrome.storage.local.get('autoSkipSponsors', (data) => {
-            sponsorBlockerToggle.checked = data.autoSkipSponsors || false;
-        });
-
-        sponsorBlockerToggle.addEventListener('change', () => {
-            chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
-        });
-    }
-}
-
-// Reset sponsors view
-function resetSponsorsView() {
-    const sponsorsList = document.getElementById('sponsors-list');
-    const sponsorsContainer = document.getElementById('sponsors-tab');
-    if (!sponsorsList || !sponsorsContainer) return;
-
-    if (!isWatchingVideo()) {
-        sponsorsContainer.innerHTML = `
-            <div class="sponsors-container">
-                <div class="sponsors-header">
-                    <h3>Sponsor Segments</h3>
-                    <div class="sponsor-toggle">
-                        <label class="switch">
-                            <input type="checkbox" id="sponsor-blocker-toggle" disabled>
-                            <span class="slider round"></span>
-                        </label>
-                        <span>Auto-Skip Sponsors</span>
-                    </div>
-                </div>
-                <div id="sponsors-list" class="sponsors-list">
-                    <p class="info-text">You have to open a video to detect sponsor segments</p>
-                </div>
-            </div>
-        `;
-    } else {
-        sponsorsContainer.innerHTML = `
-            <div class="sponsors-container">
-                <div class="sponsors-header">
-                    <h3>Sponsor Segments</h3>
-                    <div class="sponsor-toggle">
-                        <label class="switch">
-                            <input type="checkbox" id="sponsor-blocker-toggle">
-                            <span class="slider round"></span>
-                        </label>
-                        <span>Auto-Skip Sponsors</span>
-                    </div>
-                </div>
-                <div id="sponsors-list" class="sponsors-list">
-                    <div class="loading-state">
-                        <div class="spinner"></div>
-                        <p>Detecting sponsor segments...</p>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        const sponsorBlockerToggle = document.getElementById('sponsor-blocker-toggle');
-        if (sponsorBlockerToggle) {
-            chrome.storage.local.get('autoSkipSponsors', (data) => {
-                sponsorBlockerToggle.checked = data.autoSkipSponsors || false;
-            });
-
-            sponsorBlockerToggle.addEventListener('change', () => {
-                chrome.storage.local.set({ autoSkipSponsors: sponsorBlockerToggle.checked });
-            });
-        }
-
-        // First check if we have the transcript in storage
-        retrieveTranscript().then(async storedTranscript => {
-            if (storedTranscript) {
-                // Use stored transcript
-                const sponsors = await detectSponsors(storedTranscript);
-                handleSponsorsResult(sponsors);
-            } else {
-                // Fetch new transcript
-                const transcript = await getTranscript(false);
-                if (transcript && transcript !== "Transcript not available" && transcript !== "Transcript not loaded") {
-                    const sponsors = await detectSponsors(transcript);
-                    handleSponsorsResult(sponsors);
-                } else {
-                    showTranscriptError('sponsors');
-                }
+            // Load content specific to this tab
+            switch (tab) {
+                case 'summary':
+                    window.YTEnhancer.Summary.loadStoredSummary();
+                    break;
+                case 'doubt':
+                    // Initialize the doubt feature if not already done
+                    if (window.YTEnhancer.Doubt) {
+                        // First, make sure we have the chat UI setup
+                        window.YTEnhancer.Doubt.setupDoubtFeature();
+                        // Then explicitly load stored questions to show chat history
+                        // Pass false for preserveScroll to maintain the natural scroll position
+                        window.YTEnhancer.Doubt.loadStoredQuestions(true);
+                    } else {
+                        console.error('Doubt feature not available');
+                    }
+                    break;
+                case 'notes':
+                    window.YTEnhancer.Notes.loadStoredNotes();
+                    break;
+                default:
+                    break;
             }
         });
-    }
-}
-
-// Add helper function to handle sponsor results
-function handleSponsorsResult(sponsors) {
-    const sponsorsList = document.getElementById('sponsors-list');
-    if (!sponsorsList) return;
-
-    if (sponsors === null) {
-        showTranscriptError('sponsors');
-        return;
-    }
-
-    if (sponsors && sponsors.length > 0) {
-        storeSponsors(sponsors);
-        displaySponsors(sponsors);
-        setupAutoSkipSponsors(sponsors);
-    } else {
-        sponsorsList.innerHTML = '<p class="info-text">No sponsor segments detected in this video.</p>';
-    }
+    });
 }

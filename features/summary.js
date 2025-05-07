@@ -227,3 +227,44 @@ window.YTEnhancer.Summary.fetchAndDisplaySummary = async function () {
         window.YTEnhancer.Utils.showTranscriptError('summary');
     }
 };
+
+// Export function for loading stored summary
+window.YTEnhancer.Summary.loadStoredSummary = async function () {
+    try {
+        const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
+        if (!videoId) {
+            return;
+        }
+
+        const existingSummary = await window.YTEnhancer.Summary.retrieveSummary();
+        if (existingSummary) {
+            const summaryElement = document.getElementById('summary');
+            if (summaryElement) {
+                summaryElement.innerHTML = window.YTEnhancer.Summary.parseMarkdown(existingSummary.text);
+                window.YTEnhancer.Summary.updateTags(existingSummary.readingTime);
+                window.YTEnhancer.Summary.setupCopySummaryButton();
+            }
+        } else {
+            // If no stored summary, show the generate button
+            const summaryElement = document.getElementById('summary');
+            if (summaryElement) {
+                summaryElement.innerHTML = `
+                    <div class="generate-summary-container">
+                        <button id="generate-summary-button" class="generate-button">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                            </svg>
+                            Generate Summary
+                        </button>
+                        <p class="info-text">Click the button above to analyze the video and generate an AI summary.</p>
+                    </div>
+                `;
+                window.YTEnhancer.Summary.setupGenerateSummaryButton();
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load saved summary:', error);
+        window.YTEnhancer.Utils.showToast('Failed to load saved summary.');
+    }
+};

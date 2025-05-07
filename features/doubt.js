@@ -2,27 +2,121 @@
 window.YTEnhancer = window.YTEnhancer || {};
 window.YTEnhancer.Doubt = {};
 
-// Store questions in chrome storage
-window.YTEnhancer.Doubt.storeQuestion = async function (question) {
-    const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
-    // Get existing questions for this video
-    const data = await chrome.storage.local.get(`doubt_${videoId}`);
-    const existingQuestions = data[`doubt_${videoId}`] || [];
+// Store question and answer in browser storage
+window.YTEnhancer.Doubt.storeQuestion = async function (questionData, answer, timestamp) {
+    try {
+        console.log('Storing question:', typeof questionData === 'object' ? questionData.question : questionData);
+        const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
+        if (!videoId) {
+            throw new Error('No video ID available');
+        }
 
-    // Add the new question to the array
-    existingQuestions.push(question);
+        // Get video title
+        const videoTitle = document.querySelector('h1.ytd-watch-metadata')?.textContent?.trim() || 'Unknown Video';
 
-    // Store the updated array
-    await chrome.storage.local.set({
-        [`doubt_${videoId}`]: existingQuestions
-    });
+        // Create question object
+        let questionObj;
+
+        if (typeof questionData === 'object' && questionData.question) {
+            // New format from the chatbot interface
+            questionObj = {
+                id: Date.now().toString(),
+                videoId,
+                videoTitle,
+                question: questionData.question,
+                answer: questionData.answer || answer || '',
+                timestamp: questionData.timestamp || timestamp || 'No timestamp',
+                timestampSeconds: questionData.timestamp ? window.YTEnhancer.Doubt.parseTimestamp(questionData.timestamp) :
+                    timestamp ? window.YTEnhancer.Doubt.parseTimestamp(timestamp) : 0,
+                date: questionData.created || new Date().toISOString()
+            };
+        } else {
+            // Original format
+            questionObj = {
+                id: Date.now().toString(),
+                videoId,
+                videoTitle,
+                question: questionData,
+                answer: answer || '',
+                timestamp: timestamp || 'No timestamp',
+                timestampSeconds: timestamp ? window.YTEnhancer.Doubt.parseTimestamp(timestamp) : 0,
+                date: new Date().toISOString()
+            };
+        }
+
+        // Get existing questions
+        const storedData = await chrome.storage.local.get('doubts');
+        let questions = storedData.doubts || [];
+
+        // Add new question at the beginning
+        questions.unshift(questionObj);
+
+        // Limit to 50 questions to prevent storage issues
+        if (questions.length > 50) {
+            questions = questions.slice(0, 50);
+        }
+
+        // Store updated questions
+        await chrome.storage.local.set({ 'doubts': questions });
+        console.log('Successfully stored question in "doubts" array, total count:', questions.length);
+
+        // Get questions for the current video to update the UI
+        const videoQuestions = questions.filter(q => q.videoId === videoId);
+        console.log(`This video now has ${videoQuestions.length} stored questions`);
+
+        // IMPORTANT: We don't call displayChatMessages here anymore since the question & answer are already
+        // displayed in the chat UI by the submit handler. Doing it again would cause duplicates.
+        // The UI will be properly refreshed on next load by loadStoredQuestions.
+
+        // Only update the traditional UI if it exists (for backward compatibility)
+        try {
+            const emptyAnswerState = document.getElementById('empty-answer-state');
+            if (emptyAnswerState) {
+                emptyAnswerState.style.display = 'none';
+            }
+
+            const currentAnswerContainer = document.getElementById('current-answer-container');
+            if (currentAnswerContainer) {
+                currentAnswerContainer.classList.remove('hidden');
+            }
+        } catch (uiError) {
+            console.error('Error updating UI after storing question:', uiError);
+        }
+
+        console.log('Question stored successfully:', questionObj.id);
+        return questionObj;
+    } catch (error) {
+        console.error('Error storing question:', error);
+        window.YTEnhancer.Utils.showToast('Failed to store your question. Please try again.');
+        throw error;
+    }
 };
 
 // Retrieve questions from chrome storage
 window.YTEnhancer.Doubt.retrieveQuestions = async function () {
-    const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
-    const data = await chrome.storage.local.get(`doubt_${videoId}`);
-    return data[`doubt_${videoId}`] || [];
+    try {
+        const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
+        if (!videoId) {
+            console.error('No video ID available, cannot retrieve questions');
+            return [];
+        }
+
+        // First try the new format (direct array of questions)
+        const data = await chrome.storage.local.get('doubts');
+        const allQuestions = data.doubts || [];
+
+        // Filter questions for the current video ID
+        const videoQuestions = allQuestions.filter(q => q.videoId === videoId);
+
+        // Sort by date (newest first based on the date field)
+        videoQuestions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        console.log(`Retrieved ${videoQuestions.length} questions for video ${videoId}`);
+        return videoQuestions;
+    } catch (error) {
+        console.error('Error retrieving questions:', error);
+        return [];
+    }
 };
 
 // Generate answer to a question using LLM
@@ -545,747 +639,715 @@ window.YTEnhancer.Doubt.closeFullscreen = function () {
 
 // Setup the doubt feature
 window.YTEnhancer.Doubt.setupDoubtFeature = function () {
-    const submitButton = document.getElementById('submit-doubt');
+    console.log('Setting up doubt feature');
+
+    // Setup chat elements
     const doubtInput = document.getElementById('doubt-input');
-    const currentTimestampElement = document.getElementById('current-timestamp');
-    const setTimestampButton = document.getElementById('add-doubt-timestamp');
-    const jumpToTimestampButton = document.getElementById('jump-to-timestamp');
-    const currentAnswerContainer = document.getElementById('current-answer-container');
-    const emptyAnswerState = document.getElementById('empty-answer-state');
-    const fullscreenButton = document.getElementById('fullscreen-button');
-    const fullscreenCloseButton = document.getElementById('fullscreen-close');
+    const submitButton = document.getElementById('submit-doubt');
+    const chatMessages = document.getElementById('chat-messages');
+    const timestampButton = document.getElementById('add-doubt-timestamp');
 
-    // Move fullscreen overlay inside the doubt container for proper positioning
-    const moveFullscreenOverlay = () => {
-        const fullscreenOverlay = document.getElementById('fullscreen-answer-overlay');
-        const doubtContainer = document.querySelector('.doubt-container');
-
-        if (fullscreenOverlay && doubtContainer) {
-            // Check if it's already in the right container
-            if (!doubtContainer.contains(fullscreenOverlay)) {
-                // Remove from current location and add to doubt container
-                fullscreenOverlay.remove();
-                doubtContainer.appendChild(fullscreenOverlay);
-
-                // Re-attach event listener to close button
-                const newCloseButton = document.getElementById('fullscreen-close');
-                if (newCloseButton) {
-                    newCloseButton.addEventListener('click', () => {
-                        window.YTEnhancer.Doubt.closeFullscreen();
-                    });
-                }
-
-                console.log('Moved fullscreen overlay to doubt container');
-            }
-        }
-    };
-
-    // Call immediately and also after a small delay to ensure DOM is ready
-    moveFullscreenOverlay();
-    setTimeout(moveFullscreenOverlay, 100);
-
-    let currentTimestamp = '';
-    let isSubmitting = false;
-
-    // Initialize with correct empty state - use our dedicated function
-    window.YTEnhancer.Doubt.initializeEmptyState();
-
-    console.log("Initial setup completed in setupDoubtFeature");
-
-    // Load stored questions for this video
-    window.YTEnhancer.Doubt.loadStoredQuestions();
-
-    // Set up fullscreen button
-    if (fullscreenButton) {
-        fullscreenButton.addEventListener('click', () => {
-            window.YTEnhancer.Doubt.toggleFullscreen();
-        });
+    if (!doubtInput || !submitButton || !chatMessages) {
+        console.error('Required doubt elements not found');
+        return;
     }
 
-    // Set up fullscreen close button
-    if (fullscreenCloseButton) {
-        fullscreenCloseButton.addEventListener('click', () => {
-            window.YTEnhancer.Doubt.closeFullscreen();
-        });
+    // Ensure chat starts at the top when first initialized
+    if (chatMessages) {
+        chatMessages.scrollTop = 0;
     }
 
-    // Set up timestamp button
-    setTimestampButton?.addEventListener('click', () => {
-        try {
-            const video = document.querySelector('video');
-            if (!video) return;
+    // Setup tag click handlers
+    const doubtTags = chatMessages.querySelectorAll('.doubt-tag');
+    doubtTags.forEach(tag => {
+        tag.addEventListener('click', () => {
+            const fullPrompt = tag.getAttribute('data-prompt');
+            if (fullPrompt) {
+                // Store the full prompt as a data attribute on the input
+                doubtInput.setAttribute('data-full-prompt', fullPrompt);
 
-            const time = video.currentTime;
-            currentTimestamp = window.YTEnhancer.Utils.formatTime(time);
+                // Store the tag name as another data attribute
+                const tagText = tag.textContent.trim();
+                doubtInput.setAttribute('data-selected-tag', tagText);
 
-            if (currentTimestampElement) {
-                currentTimestampElement.textContent = `Timestamp: ${currentTimestamp}`;
-                currentTimestampElement.style.color = 'var(--accent-color)';
+                // Add a visual indicator that the tag is selected
+                doubtTags.forEach(t => t.classList.remove('selected'));
+                tag.classList.add('selected');
 
-                // Apply a pulse animation to indicate success
-                currentTimestampElement.classList.add('timestamp-pulse');
-                setTimeout(() => {
-                    currentTimestampElement.classList.remove('timestamp-pulse');
-                }, 1000);
+                // Focus the input but don't add any text
+                doubtInput.focus();
             }
+        });
+    });
 
-            // Enable jump to timestamp button
-            if (jumpToTimestampButton) {
-                jumpToTimestampButton.disabled = false;
+    // Setup auto-grow for textarea
+    window.YTEnhancer.Doubt.setupAutoGrowTextarea();
+
+    // Load stored questions immediately
+    window.YTEnhancer.Doubt.loadStoredQuestions().then(questions => {
+        console.log(`Loaded ${questions.length} questions on initialization`);
+    });
+
+    // Handle Enter key to submit
+    doubtInput.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (!submitButton.disabled) {
+                submitButton.click();
             }
-        } catch (error) {
-            console.error('Error setting timestamp:', error);
         }
     });
 
-    // Jump to timestamp
-    jumpToTimestampButton?.addEventListener('click', () => {
-        try {
-            if (!currentTimestamp) return;
-
+    // Timestamp button functionality
+    if (timestampButton) {
+        timestampButton.addEventListener('click', () => {
             const video = document.querySelector('video');
             if (!video) return;
 
-            const timeInSeconds = window.YTEnhancer.Doubt.parseTimestamp(currentTimestamp);
-            video.currentTime = timeInSeconds;
-        } catch (error) {
-            console.error('Error jumping to timestamp:', error);
-        }
-    });
+            // Get current timestamp
+            const currentTime = video.currentTime;
+            const formattedTime = window.YTEnhancer.Utils.formatTime(currentTime);
 
-    // Submit doubt event
-    submitButton?.addEventListener('click', async () => {
-        if (isSubmitting) return; // Prevent multiple submissions
+            // Store timestamp for submission
+            timestampButton.dataset.timestamp = formattedTime;
 
-        const question = doubtInput?.value?.trim();
-        if (!question) {
-            window.YTEnhancer.Utils.showToast('Please enter a question');
+            // Append to input or add to existing text
+            if (doubtInput.value) {
+                // Add at the end if there's already text
+                doubtInput.value += ` (${formattedTime})`;
+            } else {
+                // Just add the timestamp if there's no text
+                doubtInput.value = `At ${formattedTime}, `;
+            }
+
+            // Focus input after adding timestamp
+            doubtInput.focus();
+        });
+    }
+
+    // Submit question
+    submitButton.addEventListener('click', async () => {
+        const userInput = doubtInput.value.trim();
+        if (!userInput) {
+            doubtInput.focus();
             return;
         }
 
-        // Set submitting state
-        isSubmitting = true;
-        const originalButtonText = submitButton.textContent;
-        submitButton.innerHTML = `
-            <div class="spinner-small"></div>
-            Processing...
-        `;
-        submitButton.disabled = true;
-        submitButton.classList.add('processing');
-        doubtInput.disabled = true;
+        // Check if we have a full prompt and selected tag stored
+        const fullPrompt = doubtInput.getAttribute('data-full-prompt');
+        const selectedTag = doubtInput.getAttribute('data-selected-tag');
+
+        // What the user sees in the chat
+        let displayQuestion = userInput;
+
+        // What gets sent to the LLM
+        let llmQuestion = userInput;
+
+        // If a tag was selected, include it in the display question and use the full prompt
+        if (selectedTag && fullPrompt) {
+            // Format display question to show the user selected a tag
+            displayQuestion = `${selectedTag}: ${userInput}`;
+
+            // Combine the background prompt with the user's input for the LLM
+            llmQuestion = `${fullPrompt} ${userInput}`;
+        }
+
+        // Get timestamp if available
+        const timestamp = timestampButton && timestampButton.dataset.timestamp;
 
         try {
-            // Get current video transcript
-            const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
-            if (!videoId) {
-                throw new Error('No video ID available');
+            console.log('Processing question:', displayQuestion);
+            console.log('Using LLM question:', llmQuestion);
+
+            // Disable the submit button and show loading
+            submitButton.disabled = true;
+            submitButton.innerHTML = `
+            <div class="spinner-small"></div>
+            `;
+
+            // Clear input and reset stored data
+            doubtInput.value = '';
+            doubtInput.removeAttribute('data-full-prompt');
+            doubtInput.removeAttribute('data-selected-tag');
+            doubtInput.style.height = 'auto';
+
+            // Remove selection from all tags
+            const allTags = chatMessages.querySelectorAll('.doubt-tag');
+            allTags.forEach(tag => tag.classList.remove('selected'));
+
+            // Add the question to chat immediately (without the answer yet)
+            // User message
+            const userMessage = document.createElement('div');
+            userMessage.className = 'message user-message';
+
+            // Create message content
+            const userMessageContent = document.createElement('div');
+            userMessageContent.className = 'message-content';
+            userMessageContent.innerText = displayQuestion;
+
+            // Add timestamp badge if available
+            if (timestamp) {
+                const timestampBadge = document.createElement('div');
+                timestampBadge.className = 'timestamp-badge';
+                timestampBadge.innerText = timestamp;
+                timestampBadge.onclick = (e) => {
+                    e.stopPropagation();
+                    window.YTEnhancer.Doubt.jumpToVideoTimestamp(timestamp);
+                };
+                userMessageContent.appendChild(timestampBadge);
             }
 
-            // Show the current answer section and container with loading state
-            const currentAnswerSection = document.getElementById('current-answer-section');
-            const currentAnswerContainer = document.getElementById('current-answer-container');
-            const currentQuestionDisplay = document.getElementById('current-question');
-            const currentAnswerDisplay = document.getElementById('current-answer');
-            const emptyAnswerState = document.getElementById('empty-answer-state');
+            userMessage.appendChild(userMessageContent);
+            chatMessages.appendChild(userMessage);
 
-            if (currentAnswerSection && currentAnswerContainer && currentQuestionDisplay && currentAnswerDisplay) {
-                // Reset the answer UI state
-                window.YTEnhancer.Doubt.resetAnswerState();
+            // Show typing indicator
+            window.YTEnhancer.Doubt.showTypingIndicator();
 
-                currentQuestionDisplay.textContent = question;
+            // Scroll to bottom
+            window.YTEnhancer.Doubt.scrollToBottom();
 
-                // Add an enhanced loading animation
-                currentAnswerDisplay.innerHTML = `
-                    <div class="loading-inline">
-                        <div class="spinner-small"></div>
-                        <div class="loading-words">
-                            <p>Analyzing video content and generating answer</p>
-                            <div class="loading-dots">
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                                <div class="loading-dot"></div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+            // Reset timestamp button data
+            if (timestampButton) {
+                timestampButton.dataset.timestamp = '';
             }
 
-            let transcript = await window.YTEnhancer.Transcript.getTranscript(videoId);
+            // Get transcript
+            let transcript = await window.YTEnhancer.Transcript.retrieveTranscript();
 
-            if (!transcript || transcript === "Transcript not available" || transcript === "Transcript not loaded") {
-                throw new Error('Transcript not available');
-            }
+            // If not found, try to fetch it
+            if (!transcript) {
+                const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
+                transcript = await window.YTEnhancer.Transcript.getTranscript(videoId);
 
-            // Get answer from LLM
-            const answer = await window.YTEnhancer.Doubt.getAnswer(question, currentTimestamp, transcript);
+                if (!transcript || transcript === "Transcript not available" || transcript === "Transcript not loaded") {
+                    window.YTEnhancer.Utils.showToast('Could not find a transcript for this video');
 
-            // Format and display the answer
-            if (currentAnswerDisplay) {
-                // Simulate word-by-word typing effect
-                let words = answer.split(' ');
-                currentAnswerDisplay.innerHTML = '';
+                    // Remove typing indicator
+                    window.YTEnhancer.Doubt.removeTypingIndicator();
 
-                // Add words with a small delay to simulate typing
-                const wordDelay = Math.min(20, 1000 / words.length); // Ensures it doesn't take too long for long answers
+                    // Show transcript not available message in chat
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'message assistant-message error-message';
 
-                let typedContent = '';
-                for (let i = 0; i < words.length; i++) {
-                    await new Promise(resolve => setTimeout(resolve, wordDelay));
-                    typedContent += (i > 0 ? ' ' : '') + words[i];
-                    // Apply markdown formatting
-                    currentAnswerDisplay.innerHTML = window.YTEnhancer.Doubt.formatAnswer(typedContent);
+                    // Create assistant avatar
+                    const assistantAvatar = window.YTEnhancer.Doubt.createAssistantAvatar();
+
+                    // Create error content
+                    const errorContent = document.createElement('div');
+                    errorContent.className = 'message-content';
+                    errorContent.innerHTML = `
+                        <p>I couldn't find a transcript for this video. YouTube automatic captions are needed to answer questions about the content.</p>
+                        <p>Try playing the video for a bit - sometimes this helps load the captions.</p>
+                    `;
+
+                    // Add avatar first, then content
+                    errorMessage.appendChild(assistantAvatar);
+                    errorMessage.appendChild(errorContent);
+                    chatMessages.appendChild(errorMessage);
+
+                    // Scroll to bottom
+                    window.YTEnhancer.Doubt.scrollToBottom();
+
+                    // Re-enable submit button
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    `;
+
+                    return;
                 }
             }
 
-            // Store the question and answer
-            await window.YTEnhancer.Doubt.storeQuestion(question, answer, currentTimestamp);
+            // Generate answer
+            try {
+                const answer = await window.YTEnhancer.Doubt.getAnswer(llmQuestion, timestamp, transcript);
 
-            // Update the history display
-            await window.YTEnhancer.Doubt.loadStoredQuestions();
+                // Remove typing indicator
+                window.YTEnhancer.Doubt.removeTypingIndicator();
 
-            // Reset input
-            if (doubtInput) {
-                doubtInput.value = '';
+                // Store complete Q&A data
+                const questionData = {
+                    question: displayQuestion,
+                    llmQuestion: llmQuestion,
+                    answer,
+                    timestamp: timestamp || null,
+                    created: new Date().toISOString()
+                };
+
+                // Assistant message
+                const assistantMessage = document.createElement('div');
+                assistantMessage.className = 'message assistant-message';
+
+                // Create assistant avatar
+                const assistantAvatar = window.YTEnhancer.Doubt.createAssistantAvatar();
+
+                // Create message content
+                const assistantMessageContent = document.createElement('div');
+                assistantMessageContent.className = 'message-content';
+                assistantMessageContent.innerHTML = window.YTEnhancer.Doubt.formatAnswerText(answer);
+
+                // Add avatar first, then content
+                assistantMessage.appendChild(assistantAvatar);
+                assistantMessage.appendChild(assistantMessageContent);
+                chatMessages.appendChild(assistantMessage);
+
+                // Scroll to bottom
+                window.YTEnhancer.Doubt.scrollToBottom();
+
+                // Store the Q&A in the database *after* we've displayed it in the UI
+                await window.YTEnhancer.Doubt.storeQuestion(questionData);
+            } catch (error) {
+                console.error('Error getting answer:', error);
+
+                // Remove typing indicator
+                window.YTEnhancer.Doubt.removeTypingIndicator();
+
+                // Show error message in chat
+                const errorMessage = document.createElement('div');
+                errorMessage.className = 'message assistant-message error-message';
+
+                // Create assistant avatar
+                const assistantAvatar = window.YTEnhancer.Doubt.createAssistantAvatar();
+
+                // Create error content
+                const errorContent = document.createElement('div');
+                errorContent.className = 'message-content';
+                errorContent.innerHTML = `
+                    <p>Sorry, I couldn't generate an answer. Please try asking again or rephrase your question.</p>
+                `;
+
+                // Add avatar first, then content
+                errorMessage.appendChild(assistantAvatar);
+                errorMessage.appendChild(errorContent);
+                chatMessages.appendChild(errorMessage);
+
+                // Scroll to bottom
+                window.YTEnhancer.Doubt.scrollToBottom();
+
+                window.YTEnhancer.Utils.showToast('Failed to answer your question. Please try again.');
             }
         } catch (error) {
             console.error('Error processing question:', error);
+            window.YTEnhancer.Utils.showToast('An error occurred. Please try again.');
 
-            // Show error in answer display
-            const currentAnswerSection = document.getElementById('current-answer-section');
-            const currentAnswerContainer = document.getElementById('current-answer-container');
-            const currentAnswerDisplay = document.getElementById('current-answer');
-
-            if (currentAnswerSection && currentAnswerContainer && currentAnswerDisplay) {
-                currentAnswerSection.classList.remove('hidden');
-                currentAnswerContainer.classList.remove('hidden');
-                currentAnswerDisplay.innerHTML = `
-                    <div class="error-message">
-                        <p>Sorry, I couldn't process your question: ${error.message || 'Unknown error'}</p>
-                        <p>Please try again or ask a different question.</p>
-                    </div>
-                `;
-            }
-
-            window.YTEnhancer.Utils.showToast('Error processing your question. Please try again.');
+            // Remove typing indicator
+            window.YTEnhancer.Doubt.removeTypingIndicator();
         } finally {
-            // Reset UI state
-            isSubmitting = false;
-            if (submitButton) {
-                submitButton.innerHTML = originalButtonText;
-                submitButton.disabled = false;
-                submitButton.classList.remove('processing');
-            }
-            if (doubtInput) {
-                doubtInput.disabled = false;
-                doubtInput.focus();
-            }
-        }
-    });
-
-    // Add keyboard shortcut (Enter key) for submitting questions
-    doubtInput?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey && !isSubmitting) {
-            e.preventDefault();
-            submitButton?.click();
+            // Always re-enable the submit button
+            submitButton.disabled = false;
+            submitButton.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            `;
         }
     });
 };
 
-// Reset the doubt view based on video state
-window.YTEnhancer.Doubt.resetDoubtView = function () {
-    const doubtContainer = document.getElementById('doubt-tab');
-    if (!doubtContainer) return;
+// Format answer text with markdown-like syntax
+window.YTEnhancer.Doubt.formatAnswerText = function (text) {
+    if (!text) return '';
 
-    if (!window.YTEnhancer.Utils.isWatchingVideo()) {
-        // User is not watching a video - show disabled state
-        doubtContainer.innerHTML = `
-            <div class="doubt-container">
-                <div class="doubt-header">
-                    <h3>Questions</h3>
-                </div>
-
-                <div class="doubt-content">
-                    <div class="doubt-input-section">
-                        <div class="doubt-input-actions">
-                            <div class="timestamp-row">
-                    <div class="timestamp-display">
-                        <span id="current-timestamp">Timestamp: Not selected</span>
-                                </div>
-                                <button id="add-doubt-timestamp" class="timestamp-button" disabled aria-label="Set timestamp">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                                    </svg>
-                                </button>
-                                <button id="jump-to-timestamp" class="timestamp-button" disabled aria-label="Jump to timestamp">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                        <button id="submit-doubt" class="submit-button" disabled>
-                            Ask Question
-                        </button>
-                    </div>
-
-                        <textarea id="doubt-input" placeholder="Open a video to ask questions" disabled></textarea>
-                </div>
-
-                    <div id="current-answer-section" class="doubt-answer-section">
-                        <div id="current-answer-container" class="current-answer-container hidden">
-                            <div class="current-question-display" id="current-question"></div>
-                            <div class="current-answer-display" id="current-answer"></div>
-                        </div>
-                        <div id="empty-answer-state" class="empty-answer-state">
-                            <div class="empty-answer-icon">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                </svg>
-                            </div>
-                            <h4>Ask Your First Question</h4>
-                            <p>Get AI answers based on the video transcript</p>
-                            <ul class="question-tips">
-                                <li>Add timestamp for specific context</li>
-                                <li>Ask about video concepts</li>
-                                <li>Be specific for better results</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="doubt-history-section">
-                        <div class="history-section-header">Previous Questions</div>
-                        <div id="doubt-history" class="doubt-history-list">
-                        <p class="info-text">Open a video to view your question history.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    } else {
-        // User is watching a video - show active state
-        doubtContainer.innerHTML = `
-            <div class="doubt-container">
-                <div class="doubt-header">
-                    <h3>Questions</h3>
-                </div>
-
-                <div class="doubt-content">
-                    <div class="doubt-input-section">
-                        <textarea id="doubt-input" placeholder="Ask a question about this part of the video..."></textarea>
-
-                        <div class="doubt-input-actions">
-                            <div class="timestamp-row">
-                    <div class="timestamp-display">
-                        <span id="current-timestamp">Timestamp: Not selected</span>
-                                </div>
-                                <button id="add-doubt-timestamp" class="timestamp-button" aria-label="Set timestamp">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z"/>
-                                    </svg>
-                                </button>
-                                <button id="jump-to-timestamp" class="timestamp-button" disabled aria-label="Jump to timestamp">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                            </svg>
-                        </button>
-                    </div>
-                        <button id="submit-doubt" class="submit-button">
-                            Ask Question
-                        </button>
-                    </div>
-                </div>
-
-                    <div id="current-answer-section" class="doubt-answer-section">
-                        <div id="current-answer-container" class="current-answer-container hidden">
-                            <div class="current-question-display" id="current-question"></div>
-                            <div class="current-answer-display" id="current-answer"></div>
-                    </div>
-                        <div id="empty-answer-state" class="empty-answer-state">
-                            <div class="empty-answer-icon">
-                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="12" cy="12" r="10"></circle>
-                                    <line x1="12" y1="16" x2="12" y2="12"></line>
-                                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                                </svg>
-                            </div>
-                            <h4>Ask Your First Question</h4>
-                            <p>Get AI answers based on the video transcript</p>
-                            <ul class="question-tips">
-                                <li>Add timestamp for specific context</li>
-                                <li>Ask about video concepts</li>
-                                <li>Be specific for better results</li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="doubt-history-section">
-                        <div class="history-section-header">Previous Questions</div>
-                        <div id="doubt-history" class="doubt-history-list">
-                            <p class="info-text">Your questions will appear here.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Setup event listeners and load saved questions
-        window.YTEnhancer.Doubt.setupDoubtFeature();
-    }
+    return text
+        // Line breaks to paragraphs
+        .replace(/\n\s*\n/g, '</p><p>')
+        // Single line breaks to <br>
+        .replace(/\n(?!\n)/g, '<br>')
+        // Bold
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        // Italic
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Code blocks
+        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+        // Inline code
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        // Unordered lists
+        .replace(/^\s*-\s+(.*)/gm, '<li>$1</li>')
+        // Ordered lists
+        .replace(/^\s*(\d+)\.\s+(.*)/gm, '<li>$2</li>')
+        // Wrap with paragraph tags if not already done
+        .replace(/^(?!<)(.+)$/gm, '<p>$1</p>')
+        // Links
+        .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank">$1</a>');
 };
 
-// Load stored questions for the current video
-window.YTEnhancer.Doubt.loadStoredQuestions = async function () {
-    try {
-        const questions = await window.YTEnhancer.Doubt.retrieveQuestions();
-        window.YTEnhancer.Doubt.displayQuestions(questions);
-
-        // Initialize empty state after loading questions
-        setTimeout(() => {
-            window.YTEnhancer.Doubt.initializeEmptyState();
-        }, 100);
-    } catch (error) {
-        window.YTEnhancer.Utils.showToast('Failed to load saved questions.');
+// Display chat messages
+window.YTEnhancer.Doubt.displayChatMessages = function (questions, preserveScroll = false) {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) {
+        console.error('Chat messages container not found');
+        return;
     }
-};
 
-// Store question and answer in browser storage
-window.YTEnhancer.Doubt.storeQuestion = async function (question, answer, timestamp) {
-    try {
-        console.log('Storing question:', question);
-        const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
-        if (!videoId) {
-            throw new Error('No video ID available');
+    // Save the welcome elements
+    const welcomeTitle = chatMessages.querySelector('.doubt-welcome-title');
+    const welcomeText = chatMessages.querySelector('.doubt-welcome-text');
+    const doubtTags = chatMessages.querySelector('.doubt-tags');
+
+    // Clear existing messages
+    chatMessages.innerHTML = '';
+
+    // Re-add the welcome elements
+    if (welcomeTitle && welcomeText && doubtTags) {
+        chatMessages.appendChild(welcomeTitle);
+        chatMessages.appendChild(welcomeText);
+        chatMessages.appendChild(doubtTags);
+
+        // Re-attach click handlers to tags
+        const newDoubtTags = chatMessages.querySelectorAll('.doubt-tag');
+        const doubtInput = document.getElementById('doubt-input');
+        if (doubtInput) {
+            newDoubtTags.forEach(tag => {
+                tag.addEventListener('click', () => {
+                    const fullPrompt = tag.getAttribute('data-prompt');
+                    if (fullPrompt) {
+                        // Store the full prompt as a data attribute on the input
+                        doubtInput.setAttribute('data-full-prompt', fullPrompt);
+
+                        // Store the tag name as another data attribute
+                        const tagText = tag.textContent.trim();
+                        doubtInput.setAttribute('data-selected-tag', tagText);
+
+                        // Add a visual indicator that the tag is selected
+                        doubtTags.forEach(t => t.classList.remove('selected'));
+                        tag.classList.add('selected');
+
+                        // Focus the input but don't add any text
+                        doubtInput.focus();
+                    }
+                });
+            });
+        }
+    }
+
+    if (!questions || questions.length === 0) {
+        // No messages to display
+        return;
+    }
+
+    console.log(`Displaying ${questions.length} chat messages`);
+
+    // Display each question-answer pair as a chat message
+    questions.forEach((item, index) => {
+        if (!item.question) return; // Skip invalid entries
+
+        // User message
+        const userMessage = document.createElement('div');
+        userMessage.className = 'message user-message';
+        userMessage.dataset.index = index;
+
+        // Create message content (without avatar)
+        const userMessageContent = document.createElement('div');
+        userMessageContent.className = 'message-content';
+        userMessageContent.innerText = item.question;
+
+        // Add timestamp badge if available
+        if (item.timestamp && item.timestamp !== 'No timestamp') {
+            const timestampBadge = document.createElement('div');
+            timestampBadge.className = 'timestamp-badge';
+            timestampBadge.innerText = item.timestamp;
+            timestampBadge.onclick = (e) => {
+                e.stopPropagation();
+                window.YTEnhancer.Doubt.jumpToVideoTimestamp(item.timestamp);
+            };
+            userMessageContent.appendChild(timestampBadge);
         }
 
-        // Get video title
-        const videoTitle = document.querySelector('h1.ytd-watch-metadata')?.textContent?.trim() || 'Unknown Video';
+        userMessage.appendChild(userMessageContent);
+        chatMessages.appendChild(userMessage);
 
-        // Create question object
-        const questionObj = {
-            id: Date.now().toString(),
-            videoId,
-            videoTitle,
-            question,
-            answer,
-            timestamp: timestamp || 'No timestamp',
-            timestampSeconds: timestamp ? window.YTEnhancer.Doubt.parseTimestamp(timestamp) : 0,
-            date: new Date().toISOString()
+        // Only add assistant message if there's an answer
+        if (item.answer) {
+            // Assistant message
+            const assistantMessage = document.createElement('div');
+            assistantMessage.className = 'message assistant-message';
+
+            // Create assistant avatar
+            const assistantAvatar = document.createElement('div');
+            assistantAvatar.className = 'assistant-avatar';
+            assistantAvatar.innerHTML = `
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="12" cy="10" r="3"></circle>
+                    <path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path>
+                    <line x1="8" y1="9" x2="16" y2="9"></line>
+                    <line x1="12" y1="5" x2="12" y2="9"></line>
+                </svg>
+            `;
+
+            // Create message content
+            const assistantMessageContent = document.createElement('div');
+            assistantMessageContent.className = 'message-content';
+            assistantMessageContent.innerHTML = window.YTEnhancer.Doubt.formatAnswerText(item.answer);
+
+            // Add avatar first, then content
+            assistantMessage.appendChild(assistantAvatar);
+            assistantMessage.appendChild(assistantMessageContent);
+            chatMessages.appendChild(assistantMessage);
+        }
+    });
+
+    // Only scroll to the latest message if we're not preserving scroll position
+    if (!preserveScroll) {
+        window.YTEnhancer.Doubt.scrollToBottom();
+    }
+};
+
+// Auto-grow textarea
+window.YTEnhancer.Doubt.setupAutoGrowTextarea = function () {
+    const textarea = document.getElementById('doubt-input');
+    if (!textarea) return;
+
+    const adjustHeight = () => {
+        // Reset height to auto first to get the correct scrollHeight
+        textarea.style.height = '38px';
+
+        // Calculate new height (capped at max-height which is handled by CSS)
+        const newHeight = Math.min(120, Math.max(38, textarea.scrollHeight));
+        textarea.style.height = `${newHeight}px`;
+    };
+
+    // Call on input events
+    textarea.addEventListener('input', adjustHeight);
+
+    // Also adjust on focus and keyup to handle all cases
+    textarea.addEventListener('focus', adjustHeight);
+    textarea.addEventListener('keyup', adjustHeight);
+
+    // Initial adjustment
+    setTimeout(adjustHeight, 100);
+};
+
+// Jump to timestamp in the video
+window.YTEnhancer.Doubt.jumpToVideoTimestamp = function (timestamp) {
+    if (!timestamp) return;
+
+    const video = document.querySelector('video');
+    if (!video) return;
+
+    const seconds = window.YTEnhancer.Doubt.parseTimestamp(timestamp);
+    video.currentTime = seconds;
+
+    // Play the video if it's paused
+    if (video.paused) {
+        video.play().catch(() => console.error('Failed to play video'));
+    }
+};
+
+// Remove typing indicator
+window.YTEnhancer.Doubt.removeTypingIndicator = function () {
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+};
+
+// Smooth scroll to the bottom of the chat
+window.YTEnhancer.Doubt.scrollToBottom = function () {
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        // Use smooth scrolling behavior
+        const scrollOptions = {
+            top: chatMessages.scrollHeight,
+            behavior: 'smooth'
         };
 
-        // Get existing questions
-        const storedData = await chrome.storage.local.get('doubts');
-        let questions = storedData.doubts || [];
-
-        // Add new question at the beginning
-        questions.unshift(questionObj);
-
-        // Limit to 50 questions to prevent storage issues
-        if (questions.length > 50) {
-            questions = questions.slice(0, 50);
+        try {
+            chatMessages.scrollTo(scrollOptions);
+        } catch (e) {
+            // Fallback for browsers that don't support smooth scrolling
+            chatMessages.scrollTop = chatMessages.scrollHeight;
         }
-
-        // Store updated questions
-        await chrome.storage.local.set({ 'doubts': questions });
-
-        // Update UI to show we now have questions
-        const emptyAnswerState = document.getElementById('empty-answer-state');
-        if (emptyAnswerState) {
-            emptyAnswerState.style.display = 'none';
-        }
-
-        const currentAnswerContainer = document.getElementById('current-answer-container');
-        if (currentAnswerContainer) {
-            currentAnswerContainer.classList.remove('hidden');
-        }
-
-        console.log('Question stored successfully:', questionObj.id);
-        return questionObj;
-    } catch (error) {
-        console.error('Error storing question:', error);
-        throw error;
     }
 };
 
-// Load stored questions
-window.YTEnhancer.Doubt.loadStoredQuestions = async function () {
+// Show typing indicator while waiting for a response
+window.YTEnhancer.Doubt.showTypingIndicator = function () {
+    const chatMessages = document.getElementById('chat-messages');
+    if (!chatMessages) return;
+
+    // Remove any existing typing indicator
+    const existingIndicator = document.getElementById('typing-indicator');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+
+    const typingIndicator = document.createElement('div');
+    typingIndicator.className = 'message assistant-message typing-message';
+    typingIndicator.id = 'typing-indicator';
+
+    // Create AI avatar using the helper function
+    const assistantAvatar = window.YTEnhancer.Doubt.createAssistantAvatar();
+
+    const typingContent = document.createElement('div');
+    typingContent.className = 'message-content typing-indicator';
+    typingContent.innerHTML = `
+        <div class="typing-dots-container">
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        </div>
+    `;
+
+    typingIndicator.appendChild(assistantAvatar);
+    typingIndicator.appendChild(typingContent);
+
+    // Add the typing indicator to the chat messages
+    chatMessages.appendChild(typingIndicator);
+
+    window.YTEnhancer.Doubt.scrollToBottom();
+};
+
+// Reset the doubt view
+window.YTEnhancer.Doubt.resetDoubtView = function () {
+    console.log('Resetting doubt view');
+
+    // Reset error state - remove any error styling from previous sessions
+    const typingIndicator = document.getElementById('typing-indicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+
+    // Reset any error toast that might be showing
+    const toast = document.getElementById('yt-enhancer-toast');
+    if (toast) {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(100%)';
+    }
+
+    // Clear all messages but keep welcome section
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        // Save the welcome elements
+        const welcomeTitle = chatMessages.querySelector('.doubt-welcome-title');
+        const welcomeText = chatMessages.querySelector('.doubt-welcome-text');
+        const doubtTags = chatMessages.querySelector('.doubt-tags');
+
+        // Clear all messages
+        chatMessages.innerHTML = '';
+
+        // Re-add the welcome elements
+        if (welcomeTitle && welcomeText && doubtTags) {
+            chatMessages.appendChild(welcomeTitle);
+            chatMessages.appendChild(welcomeText);
+            chatMessages.appendChild(doubtTags);
+
+            // Re-attach click handlers to tags
+            const newDoubtTags = chatMessages.querySelectorAll('.doubt-tag');
+            const doubtInput = document.getElementById('doubt-input');
+            if (doubtInput) {
+                newDoubtTags.forEach(tag => {
+                    tag.addEventListener('click', () => {
+                        const fullPrompt = tag.getAttribute('data-prompt');
+                        if (fullPrompt) {
+                            // Store the full prompt as a data attribute on the input
+                            doubtInput.setAttribute('data-full-prompt', fullPrompt);
+
+                            // Store the tag name as another data attribute
+                            const tagText = tag.textContent.trim();
+                            doubtInput.setAttribute('data-selected-tag', tagText);
+
+                            // Add a visual indicator that the tag is selected
+                            doubtTags.forEach(t => t.classList.remove('selected'));
+                            tag.classList.add('selected');
+
+                            // Focus the input but don't add any text
+                            doubtInput.focus();
+                        }
+                    });
+                });
+            }
+        }
+
+        // Reset scroll position to top
+        chatMessages.scrollTop = 0;
+    }
+
+    // Clear input
+    const doubtInput = document.getElementById('doubt-input');
+    if (doubtInput) {
+        doubtInput.value = '';
+        doubtInput.removeAttribute('data-full-prompt');
+        doubtInput.removeAttribute('data-selected-tag');
+        doubtInput.style.height = '38px';
+    }
+
+    // Remove selection from all tags
+    const allTags = chatMessages.querySelectorAll('.doubt-tag');
+    allTags.forEach(tag => tag.classList.remove('selected'));
+
+    // Reset submit button
+    const submitButton = document.getElementById('submit-doubt');
+    if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+        `;
+    }
+}
+
+// Load stored questions from chrome storage
+window.YTEnhancer.Doubt.loadStoredQuestions = async function (preserveScroll = true) {
     try {
-        // Get current video ID
-        const currentVideoId = window.YTEnhancer.Utils.getCurrentVideoId();
+        console.log('Loading stored questions');
+        // Retrieve questions for current video
+        const questions = await window.YTEnhancer.Doubt.retrieveQuestions();
 
-        // Get all stored questions
-        const storedData = await chrome.storage.local.get('doubts');
-        const questions = storedData.doubts || [];
+        console.log(`Retrieved ${questions.length} questions for this video`);
 
-        // Filter questions for the current video
-        const videoQuestions = currentVideoId
-            ? questions.filter(q => q.videoId === currentVideoId)
-            : [];
+        // Update the chat interface - pass the preserveScroll parameter
+        window.YTEnhancer.Doubt.displayChatMessages(questions, preserveScroll);
 
-        // Update the history display
-        window.YTEnhancer.Doubt.updateQuestionHistoryDisplay(videoQuestions);
+        // Update the traditional UI if it exists (for backwards compatibility)
+        if (document.getElementById('doubt-history')) {
+            window.YTEnhancer.Doubt.displayQuestions(questions);
+        }
 
-        return videoQuestions;
+        return questions;
     } catch (error) {
         console.error('Error loading stored questions:', error);
         return [];
     }
 };
 
-// Update question history display
-window.YTEnhancer.Doubt.updateQuestionHistoryDisplay = function (questions) {
-    try {
-        console.log('Updating question history display with', questions ? questions.length : 0, 'questions');
-        const historyContainer = document.getElementById('doubt-history');
-        const currentAnswerContainer = document.getElementById('current-answer-container');
-        const emptyAnswerState = document.getElementById('empty-answer-state');
-        const currentAnswerSection = document.getElementById('current-answer-section');
-        const currentQuestion = document.getElementById('current-question');
-        const currentAnswer = document.getElementById('current-answer');
-
-        if (!historyContainer) {
-            console.error('History container not found');
-            return;
-        }
-
-        // If questions not provided, try to load them
-        if (!questions) {
-            window.YTEnhancer.Doubt.loadStoredQuestions();
-            return;
-        }
-
-        // Clear existing content
-        historyContainer.innerHTML = '';
-
-        if (questions.length === 0) {
-            historyContainer.innerHTML = '<p class="info-text">No questions asked yet</p>';
-
-            // Clear current question/answer if they exist
-            if (currentQuestion) currentQuestion.textContent = '';
-            if (currentAnswer) currentAnswer.textContent = '';
-
-            // When no questions, always show empty state and hide answer container
-            if (currentAnswerSection) {
-                currentAnswerSection.classList.remove('hidden');
-            }
-            if (currentAnswerContainer) {
-                currentAnswerContainer.classList.add('hidden');
-            }
-            if (emptyAnswerState) {
-                emptyAnswerState.style.display = 'flex';
-            }
-
-            console.log('No questions, empty state shown');
-            return;
-        }
-
-        // Create question elements
-        questions.forEach(q => {
-            const questionElement = document.createElement('div');
-            questionElement.className = 'doubt-history-item';
-
-            // Format date for display - just show time if today, otherwise show date too
-            const date = new Date(q.date);
-            const today = new Date();
-            let formattedDate;
-
-            if (date.toDateString() === today.toDateString()) {
-                formattedDate = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            } else {
-                formattedDate = date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-                    ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-
-            questionElement.innerHTML = `
-                <div class="history-item-content">
-                    ${q.timestamp !== 'No timestamp' ?
-                    `<div class="history-timestamp" data-time="${q.timestampSeconds}">${q.timestamp}</div>` :
-                    '<div class="history-timestamp">No timestamp</div>'
-                }
-                    <div class="history-question">${q.question}</div>
-                </div>
-                <div class="history-actions">
-                    <button class="history-view-btn" aria-label="View full answer">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="16" x2="12" y2="12"></line>
-                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
-                        </svg>
-                    </button>
-                    <button class="history-delete-btn" aria-label="Delete question">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
-                </div>
-            `;
-
-            // Store the answer and other data as attributes on the element
-            questionElement.dataset.question = q.question;
-            questionElement.dataset.answer = q.answer;
-            questionElement.dataset.timestamp = q.timestamp;
-            questionElement.dataset.timestampSeconds = q.timestampSeconds;
-
-            // Add event listener for clicking on the question to view it
-            questionElement.addEventListener('click', (e) => {
-                // Don't trigger if clicking delete button
-                if (e.target.closest('.history-delete-btn')) return;
-
-                // Update current answer display
-                const currentAnswerContainer = document.getElementById('current-answer-container');
-                const currentQuestionDisplay = document.getElementById('current-question');
-                const currentAnswerDisplay = document.getElementById('current-answer');
-
-                if (currentAnswerContainer && currentQuestionDisplay && currentAnswerDisplay) {
-                    currentQuestionDisplay.textContent = q.question;
-                    // Format the answer text with markdown
-                    currentAnswerDisplay.innerHTML = window.YTEnhancer.Doubt.formatAnswer(q.answer);
-
-                    // Reset the answer UI state - properly hide empty state and show answer
-                    window.YTEnhancer.Doubt.resetAnswerState();
-
-                    // Update active state
-                    historyContainer.querySelectorAll('.doubt-history-item').forEach(item => {
-                        item.classList.remove('active');
-                    });
-                    questionElement.classList.add('active');
-                }
-            });
-
-            // Add event listener for delete button
-            const deleteButton = questionElement.querySelector('.history-delete-btn');
-            if (deleteButton) {
-                deleteButton.addEventListener('click', async (e) => {
-                    e.stopPropagation();
-                    console.log('Delete button clicked for question:', q.question);
-
-                    try {
-                        // Get updated questions list from storage
-                        const storedData = await chrome.storage.local.get('doubts');
-                        const allQuestions = storedData.doubts || [];
-
-                        // Find the exact question to delete by matching multiple properties
-                        const globalIndex = allQuestions.findIndex(item =>
-                            item.id === q.id &&
-                            item.question === q.question &&
-                            item.date === q.date
-                        );
-
-                        console.log('Question index in global array:', globalIndex);
-
-                        if (globalIndex !== -1) {
-                            // Remove the question from the array
-                            allQuestions.splice(globalIndex, 1);
-
-                            // Update storage
-                            await chrome.storage.local.set({ 'doubts': allQuestions });
-
-                            // Get updated list of questions for current video
-                            const videoId = window.YTEnhancer.Utils.getCurrentVideoId();
-                            const updatedVideoQuestions = allQuestions.filter(item => item.videoId === videoId);
-
-                            // Update the display with filtered questions
-                            window.YTEnhancer.Doubt.updateQuestionHistoryDisplay(updatedVideoQuestions);
-
-                            // Reset answer state based on remaining questions
-                            if (updatedVideoQuestions.length === 0) {
-                                window.YTEnhancer.Doubt.resetAnswerState();
-                            }
-
-                            console.log('Question deleted successfully, remaining questions:', updatedVideoQuestions.length);
-                        } else {
-                            console.error('Question not found in storage');
-                        }
-                    } catch (error) {
-                        console.error('Error deleting question:', error);
-                    }
-                });
-            }
-
-            // Add event listener for timestamp clicks
-            const timestampElement = questionElement.querySelector('.history-timestamp');
-            if (timestampElement && q.timestamp !== 'No timestamp') {
-                timestampElement.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const time = parseFloat(timestampElement.dataset.time);
-                    const video = document.querySelector('video');
-                    if (video && !isNaN(time)) {
-                        video.currentTime = time;
-                    }
-                });
-                timestampElement.style.cursor = 'pointer';
-            }
-
-            historyContainer.appendChild(questionElement);
-        });
-    } catch (error) {
-        console.error('Error updating question history display:', error);
-    }
+// Create assistant avatar element
+window.YTEnhancer.Doubt.createAssistantAvatar = function () {
+    const assistantAvatar = document.createElement('div');
+    assistantAvatar.className = 'assistant-avatar';
+    assistantAvatar.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <circle cx="12" cy="10" r="3"></circle>
+            <path d="M7 21v-2a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v2"></path>
+            <line x1="8" y1="9" x2="16" y2="9"></line>
+            <line x1="12" y1="5" x2="12" y2="9"></line>
+        </svg>
+    `;
+    return assistantAvatar;
 };
 
-// Add a function to reset the answer UI state
-window.YTEnhancer.Doubt.resetAnswerState = function () {
-    try {
-        console.log('Resetting answer UI state');
-        const currentAnswerSection = document.getElementById('current-answer-section');
-        const currentAnswerContainer = document.getElementById('current-answer-container');
-        const emptyAnswerState = document.getElementById('empty-answer-state');
-        const doubtHistory = document.getElementById('doubt-history');
-        const currentQuestion = document.getElementById('current-question');
+// Smooth scroll to the top of the chat
+window.YTEnhancer.Doubt.scrollToTop = function () {
+    const chatMessages = document.getElementById('chat-messages');
+    if (chatMessages) {
+        // Use smooth scrolling behavior
+        const scrollOptions = {
+            top: 0,
+            behavior: 'smooth'
+        };
 
-        // Always ensure the answer section is visible
-        if (currentAnswerSection) {
-            currentAnswerSection.classList.remove('hidden');
+        try {
+            chatMessages.scrollTo(scrollOptions);
+        } catch (e) {
+            // Fallback for browsers that don't support smooth scrolling
+            chatMessages.scrollTop = 0;
         }
-
-        // Check if there are any questions in the history
-        const hasQuestions = doubtHistory && doubtHistory.querySelectorAll('.doubt-history-item').length > 0;
-        console.log('Has questions in history:', hasQuestions);
-
-        // Check if there's a current active question
-        const hasActiveQuestion = currentQuestion && currentQuestion.textContent.trim() !== '';
-        console.log('Has active question:', hasActiveQuestion);
-
-        if (!hasQuestions || !hasActiveQuestion) {
-            // If no questions or no active question, show empty state
-            if (currentAnswerContainer) {
-                currentAnswerContainer.classList.add('hidden');
-                console.log('Answer container hidden');
-            }
-
-            if (emptyAnswerState) {
-                emptyAnswerState.style.display = 'flex';
-                console.log('Empty state displayed');
-            }
-        } else {
-            // If there are questions and an active question, show answer container
-            if (currentAnswerContainer) {
-                currentAnswerContainer.classList.remove('hidden');
-                console.log('Answer container shown');
-            }
-
-            if (emptyAnswerState) {
-                emptyAnswerState.style.display = 'none';
-                console.log('Empty state hidden');
-            }
-        }
-    } catch (error) {
-        console.error('Error in resetAnswerState:', error);
     }
-};
-
-// Helper function to format answer text
-window.YTEnhancer.Doubt.formatAnswer = function (text) {
-    // Use the parseMarkdown function from Summary module if available
-    if (window.YTEnhancer.Summary && typeof window.YTEnhancer.Summary.parseMarkdown === 'function') {
-        return window.YTEnhancer.Summary.parseMarkdown(text);
-    }
-
-    // Fallback simple markdown parser if Summary module is not available
-    return text
-        .replace(/(?:\r\n|\r|\n)/g, '<br>') // Line breaks
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold: **text**
-        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italics: *text*
-        .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank">$1</a>'); // Links: [text](url)
 };

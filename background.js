@@ -1,10 +1,5 @@
 chrome.runtime.onInstalled.addListener(() => {
-    // Initialize default settings
-    chrome.storage.local.get('autoSkipSponsors', (data) => {
-        if (data.autoSkipSponsors === undefined) {
-            chrome.storage.local.set({ autoSkipSponsors: false });
-        }
-    });
+    // No initialization needed now that we've removed sponsors feature
 });
 
 // Ensure content script is injected only when YouTube loads completely

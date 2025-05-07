@@ -86,7 +86,7 @@ window.YTEnhancer.Utils.showToast = function (message) {
 
 
 window.YTEnhancer.Utils.showTranscriptError = function (feature) {
-    const element = document.getElementById(feature === 'summary' ? 'summary' : 'chapters-list');
+    const element = document.getElementById(feature === 'summary' ? 'summary' : feature === 'doubt' ? 'current-answer' : 'summary');
     if (!element) return;
 
     element.innerHTML = `

@@ -1,6 +1,6 @@
 # YouTube Enhancer
 
-YouTube Enhancer is an open-source browser extension designed to revolutionize your YouTube experience. Its core feature—**AI-powered Smart Summarization**—allows you to quickly grasp the essence of any video without watching the entire content. Additionally, it offers a feature-rich sidebar for note-taking, chapter generation, sponsor detection, and transcript management, making your YouTube experience more efficient and productive.
+YouTube Enhancer is an open-source browser extension designed to revolutionize your YouTube experience. Its core feature—**AI-powered Smart Summarization**—allows you to quickly grasp the essence of any video without watching the entire content. Additionally, it offers a feature-rich sidebar for note-taking and transcript management, making your YouTube experience more efficient and productive.
 
 ## Key Feature: ✨ Smart Summarization
 - **Instant AI-powered summaries**: Get concise, high-quality summaries of YouTube videos based on their transcripts.
@@ -10,18 +10,15 @@ YouTube Enhancer is an open-source browser extension designed to revolutionize y
 
 ## Additional Features
 
+### ❓ Video Questions & Answers
+- Ask questions about the video content and get AI-generated answers.
+- Get instant clarifications on complex topics.
+- Enhance your learning with context-aware Q&A.
+
 ### 📓 Advanced Note-taking
 - Take and save notes for any video.
 - Add timestamps for easy reference.
 - Export notes as text files for future use.
-
-### ⏳ Automated Chapters
-- Automatically generate chapters based on the video's transcript.
-- Navigate to key moments effortlessly.
-
-### 📲 Sponsor Segment Detection
-- Identify and skip sponsored sections within videos.
-- Save time by avoiding unnecessary ad content.
 
 ## Installation
 
@@ -39,7 +36,7 @@ Choose one of the following methods to download the extension:
 
 ### Step 2: Install the Extension in Your Browser
 
-1. Open your browser’s extensions page:
+1. Open your browser's extensions page:
    - **Chrome**: Go to `chrome://extensions/`
    - **Firefox**: Go to `about:debugging#/runtime/this-firefox`
 
@@ -53,9 +50,8 @@ Choose one of the following methods to download the extension:
 Once installed and enabled, you can access YouTube Enhancer Sidebar by clicking the icon on the right-most end of the youtube's navbar. The sidebar interface provides quick access to the following features:
 
 - **Smart Summarization**: Instantly generate AI-powered video summaries with a single click.
+- **Questions**: Ask questions about the video and receive context-aware answers.
 - **Notes**: Take, save, and export notes with timestamps.
-- **Chapters**: Auto-generate video chapters for easy navigation.
-- **Sponsor Detection**: Automatically detect and skip sponsored segments.
 
 ## Contributing
 

@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "YouTube Enhancer",
   "version": "1.0",
-  "description": "Get AI-generated summaries, notes, chapters, and sponsor detection for YouTube videos.",
+  "description": "Get AI-generated summaries, notes, and Q&A for YouTube videos.",
   "permissions": ["storage", "scripting", "activeTab", "downloads"],
   "host_permissions": ["https://www.youtube.com/*"],
   "background": {
@@ -24,8 +24,6 @@
       "features/transcript.js",
       "features/summary.js",
       "features/doubt.js",
-      "features/sponsors.js",
-      "features/chapters.js",
       "features/notes.js",
       "features/content.js"
     ],
@@ -42,8 +40,6 @@
         "features/transcript.js",
         "features/summary.js",
         "features/doubt.js",
-        "features/sponsors.js",
-        "features/chapters.js",
         "features/notes.js",
         "features/content.js"
       ],

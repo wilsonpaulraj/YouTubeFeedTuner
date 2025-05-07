@@ -75,55 +75,8 @@ window.YTEnhancer.LLM.getLLMResponse = async function (prompt) {
                 return generatedText;
             }
 
-            // For other requests (chapters, sponsors), validate JSON
-            try {
-                // Try to find JSON in the response
-                const jsonMatch = generatedText.match(/\[[\s\S]*\]/);
-                if (jsonMatch) {
-                    const jsonStr = jsonMatch[0];
-                    // Clean up the JSON string
-                    const cleanedJson = jsonStr
-                        .replace(/\n/g, ' ')
-                        .replace(/\r/g, '')
-                        .replace(/\t/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-
-                    // Validate JSON
-                    JSON.parse(cleanedJson);
-                    return cleanedJson;
-                } else {
-                    // If no array found, try to parse the entire response
-                    const cleanedJson = generatedText
-                        .replace(/\n/g, ' ')
-                        .replace(/\r/g, '')
-                        .replace(/\t/g, ' ')
-                        .replace(/\s+/g, ' ')
-                        .trim();
-
-                    JSON.parse(cleanedJson);
-                    return cleanedJson;
-                }
-            } catch (parseError) {
-                // If JSON parsing fails, try to extract just the array part
-                const arrayMatch = generatedText.match(/\[[\s\S]*\]/);
-                if (arrayMatch) {
-                    try {
-                        const cleanedJson = arrayMatch[0]
-                            .replace(/\n/g, ' ')
-                            .replace(/\r/g, '')
-                            .replace(/\t/g, ' ')
-                            .replace(/\s+/g, ' ')
-                            .trim();
-
-                        JSON.parse(cleanedJson);
-                        return cleanedJson;
-                    } catch (e) {
-                        throw new Error('Invalid JSON response from API');
-                    }
-                }
-                throw new Error('Invalid JSON response from API');
-            }
+            // For all other requests, just return the generated text
+            return generatedText;
 
         } catch (error) {
             console.error('LLM request error:', error.message, error.stack);
